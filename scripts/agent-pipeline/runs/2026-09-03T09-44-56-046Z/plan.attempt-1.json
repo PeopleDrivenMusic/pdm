@@ -1,0 +1,43 @@
+```json
+{
+	"decisions": [
+		"Move artist+viewer loading into a new src/routes/(app)/artist/[slug]/+layout.server.ts (the current logic in +page.server.ts:7-21/54-61 minus the tracks/albums/content promises); SvelteKit does not re-run a layout's load when only the child [view] param changes, so this becomes the 'load once, shared across views' tier for free.",
+		"Turn src/routes/(app)/artist/[slug]/+page.server.ts into a redirect-only load (`throw redirect(307, `/artist/${params.slug}/feed`)`), keeping a minimal +page.svelte alongside it since SvelteKit requires the file to exist even though it never renders (satisfies 'default view is feed').",
+		"Create src/routes/(app)/artist/[slug]/[view]/+page.server.ts: validate params.view against the 5 known ids (404 otherwise), then branch to construct only the promises the matching view's components actually consume — reusing the exact entitlement/tracksPromise/contentPromise construction currently in +page.server.ts:19-52. feed and posts need tracks+albums+content, music needs tracks+albums, photos/videos need content only — this is the 'not all three' lazy-load requirement.",
+		"Create src/routes/(app)/artist/[slug]/[view]/+page.svelte: move the per-tab template blocks from +page.svelte:87-159 here, selecting the block from params.view instead of client activeTab state, passing each child component (ArtistFeed/ArtistTracks/ArtistAlbums/ArtistPosts/ArtistPhotos/ArtistVideos — none of which are modified) only the props its view's loader populated.",
+		"Move the hero header, Tabs, and ChatWidget sidebar (+page.svelte:49-166 minus the {#if activeTab...} block) into a new src/routes/(app)/artist/[slug]/+layout.svelte using `{@render children?.()}` (same pattern as src/routes/(app)/+layout.svelte:49) where the tab content used to be — this layout instance persists across view navigation so the hero/subscribe UI and Tabs never remount on tab switch.",
+		"Add a client-side per-view cache: a `$state<Record<ViewId, PageData>>` created in the new +layout.svelte, exposed via setContext; [view]/+page.svelte writes `page.data` into it (keyed by params.view) in an $effect on first successful load of that view.",
+		"Extend src/lib/ui/Tabs.svelte (not its two other consumers) with an optional per-tab `href`: when present, render `<a href>` instead of `<button onclick>` (Tabs.svelte:82-96) and replace the click() handler (Tabs.svelte:67-70) with logic that checks the cache from the previous decision — if the target view is already cached, call `replaceState(href, {})` from $app/navigation (shallow routing: updates the URL bar without invoking any load) and flip activeTab locally; otherwise call `goto(href)`, which runs [view]/+page.server.ts's load exactly once and populates the cache. Tabs without an `href` field keep the existing button/onTabChange behavior untouched, since ContentTypeTabs.svelte:6-13 and profile/[username]/+page.svelte:45 both drive Tabs with pure client state and no href and must not regress.",
+		"Leave src/lib/client/subscription.ts:16's invalidateAll() as-is — subscribe/unsubscribe deliberately does a full entitlement refresh (out of scope to change) and is orthogonal to the tab-switch caching path, which never calls invalidateAll."
+	],
+	"fileMap": [
+		{ "path": "src/routes/(app)/artist/[slug]/+page.server.ts", "line": 7, "reason": "current combined load (artist/viewer/tracks/albums/content) to be split between the new +layout.server.ts (artist/viewer) and [view]/+page.server.ts (tracks/albums/content)" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.server.ts", "line": 19, "reason": "entitlement lookup + parallel list-query kickoff to be reused verbatim inside the new per-view loader, gated by which view was requested" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.server.ts", "line": 48, "reason": "contentPromise construction (ArtistPublicContentService.getArtistContent) — only fetched for feed/posts/photos/videos, skipped for music" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.svelte", "line": 15, "reason": "PageData destructure that the new layout (artist/viewer) and per-view page (tracks/albums/content) must split" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.svelte", "line": 22, "reason": "static tabs array (feed/music/posts/photos/videos/shop) that becomes the href-bearing tab config moved into the new +layout.svelte" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.svelte", "line": 85, "reason": "current Tabs usage with bind:activeTab, to be replaced with href-driven navigation in the new layout" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.svelte", "line": 87, "reason": "start of the {#if activeTab.id === ...} block to be moved into [view]/+page.svelte, switched on params.view" },
+		{ "path": "src/routes/(app)/artist/[slug]/+page.svelte", "line": 164, "reason": "ChatWidget in the sidebar, part of the shared shell that moves into the new persistent +layout.svelte" },
+		{ "path": "src/lib/ui/Tabs.svelte", "line": 67, "reason": "click() handler that only sets activeTab/fires onTabChange today — needs branching logic (cached view -> replaceState, uncached -> goto) when a tab has an href" },
+		{ "path": "src/lib/ui/Tabs.svelte", "line": 84, "reason": "tab is rendered as a <button>; needs to become an <a href> when the tab config supplies href, for bookmarkable/shareable URL-driven nav" },
+		{ "path": "src/lib/ui/Tabs.svelte", "line": 22, "reason": "TabsProps interface (tabs/activeTab/onTabChange) needs the optional href field added without breaking existing non-href consumers" },
+		{ "path": "src/routes/studio/content/components/ContentTypeTabs.svelte", "line": 6, "reason": "existing Tabs consumer with no href field, pure client-state driven — proves the href behavior must stay opt-in on Tabs.svelte" },
+		{ "path": "src/routes/(app)/profile/[username]/+page.svelte", "line": 45, "reason": "second existing Tabs consumer (bind:activeTab + onTabChange, no href) that must keep working unchanged" },
+		{ "path": "src/routes/(app)/artist/[slug]/components/ArtistFeed.svelte", "line": 10, "reason": "only needs `content`; confirms photos/videos/feed can share a content-only prop shape" },
+		{ "path": "src/routes/(app)/artist/[slug]/components/ArtistTracks.svelte", "line": 7, "reason": "needs artist+tracks+albums; used by both feed and music views, so those two views must fetch tracks+albums" },
+		{ "path": "src/routes/(app)/artist/[slug]/components/ArtistAlbums.svelte", "line": 7, "reason": "needs artist+albums only; music view's second section" },
+		{ "path": "src/routes/(app)/artist/[slug]/components/ArtistPosts.svelte", "line": 8, "reason": "needs artist+tracks+albums+content+isLoggedIn; posts view is the one that still needs all three promises" },
+		{ "path": "src/routes/(app)/artist/[slug]/components/ArtistPhotos.svelte", "line": 8, "reason": "needs content only; photos view fetches only contentPromise" },
+		{ "path": "src/routes/(app)/artist/[slug]/components/ArtistVideos.svelte", "line": 9, "reason": "needs content only; videos view fetches only contentPromise" },
+		{ "path": "src/routes/(app)/+layout.svelte", "line": 49, "reason": "existing {@render children?.()} pattern to replicate in the new artist [slug]/+layout.svelte" },
+		{ "path": "src/lib/client/subscription.ts", "line": 16, "reason": "existing invalidateAll() call on subscribe/unsubscribe, confirmed out of scope and left untouched, distinct from the tab-switch nav path which must never call it" }
+	],
+	"verifyCommands": [
+		"yarn check",
+		"yarn lint",
+		"yarn test:unit -- --run e2e/artist-subscription.spec.ts",
+		"yarn test:e2e"
+	]
+}
+```

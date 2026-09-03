@@ -11,3 +11,8 @@ bun.lockb
 # Supabase CLI's local link cache (already gitignored via supabase/.gitignore,
 # but prettier doesn't read nested .gitignore files)
 supabase/.temp/
+
+# Raw per-attempt agent output committed as evidence — verbatim LLM text,
+# not guaranteed to be well-formed JSON on its own (may still carry a
+# ```json fence prettier can't parse).
+scripts/agent-pipeline/runs/**/plan.attempt-*.json

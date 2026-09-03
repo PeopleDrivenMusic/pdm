@@ -69,4 +69,5 @@ outreach/
 # docs/superpowers/specs/2026-09-03-agent-pipeline-takehome-design.md §9).
 scripts/agent-pipeline/runs/*
 !scripts/agent-pipeline/runs/2026-09-03T03-44-39-252Z/
+!scripts/agent-pipeline/runs/2026-09-03T09-44-56-046Z/
 scripts/agent-pipeline/last-run.log

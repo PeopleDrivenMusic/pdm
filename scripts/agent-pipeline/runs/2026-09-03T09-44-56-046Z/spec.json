@@ -1,0 +1,31 @@
+{
+	"problem": "Artist page tabs (Feed/Music/Posts/Photos/Videos) use client-only activeTab state and are not URL-addressable. All data loads upfront regardless of active view, preventing lazy loading and per-view caching. URLs like /artist/[slug] cannot deep-link to specific views and are not shareable/bookmarkable per tab.",
+	"requirements": [
+		"Create URL-addressable routes at /artist/[slug]/[view] where view ∈ {feed, music, posts, photos, videos}",
+		"URLs for specific views are bookmarkable and survive page reload",
+		"Navigation between views uses client-side routing (goto/navigation) without full page reload",
+		"Data loads lazily server-side: only data for the initially-loaded view is fetched, not all three (tracks/albums/content)",
+		"Views that have been loaded stay cached client-side; re-navigating to an already-loaded view does not trigger re-fetch",
+		"Navigation between views does not call invalidateAll() and does not re-run the page load function",
+		"Tabs component supports URL-driven navigation with href-based click handlers",
+		"Default view is feed when no [view] parameter is provided (/artist/[slug] redirects to /artist/[slug]/feed)"
+	],
+	"outOfScope": [
+		"Deep linking to nested content within views (specific posts, tracks, or galleries)",
+		"Implementing a Shop view (already marked as coming soon)",
+		"Changes to subscription/entitlement logic or access control",
+		"Refactoring individual content component files (ArtistFeed, ArtistTracks, ArtistPosts, etc.)",
+		"Changes to the chat widget or sidebar layout"
+	],
+	"filesLikely": [
+		"src/routes/(app)/artist/[slug]/+page.svelte",
+		"src/routes/(app)/artist/[slug]/+page.server.ts",
+		"src/lib/ui/Tabs.svelte",
+		"src/routes/(app)/artist/[slug]/components/ArtistFeed.svelte",
+		"src/routes/(app)/artist/[slug]/components/ArtistTracks.svelte",
+		"src/routes/(app)/artist/[slug]/components/ArtistAlbums.svelte",
+		"src/routes/(app)/artist/[slug]/components/ArtistPosts.svelte",
+		"src/routes/(app)/artist/[slug]/components/ArtistPhotos.svelte",
+		"src/routes/(app)/artist/[slug]/components/ArtistVideos.svelte"
+	]
+}
