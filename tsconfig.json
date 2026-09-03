@@ -9,11 +9,48 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler"
-	}
+		"moduleResolution": "bundler",
+		// scripts/agent-pipeline is executed directly by Node's native TS
+		// support, which requires explicit .ts extensions on relative imports —
+		// this is what lets svelte-check accept them too (noEmit is already
+		// true via .svelte-kit/tsconfig.json, which this option requires).
+		"allowImportingTsExtensions": true
+	},
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 	//
 	// If you want to overwrite includes/excludes, make sure to copy over the relevant includes/excludes
 	// from the referenced tsconfig.json - TypeScript does not merge them in
+	//
+	// scripts/agent-pipeline is a standalone script tree run directly by Node
+	// (not bundled by Vite), so it isn't under src/ — added explicitly here so
+	// `yarn check` actually type-checks it instead of silently skipping it.
+	"include": [
+		"ambient.d.ts",
+		"env.d.ts",
+		"non-ambient.d.ts",
+		".svelte-kit/types/**/$types.d.ts",
+		"vite.config.js",
+		"vite.config.ts",
+		"src/**/*.js",
+		"src/**/*.ts",
+		"src/**/*.svelte",
+		"test/**/*.js",
+		"test/**/*.ts",
+		"test/**/*.svelte",
+		"tests/**/*.js",
+		"tests/**/*.ts",
+		"tests/**/*.svelte",
+		"scripts/**/*.ts"
+	],
+	"exclude": [
+		"node_modules/**",
+		"src/service-worker.js",
+		"src/service-worker/**/*.js",
+		"src/service-worker.ts",
+		"src/service-worker/**/*.ts",
+		"src/service-worker.d.ts",
+		"src/service-worker/**/*.d.ts",
+		"scripts/agent-pipeline/runs/**"
+	]
 }

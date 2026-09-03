@@ -1,0 +1,15 @@
+{
+	"runId": "2026-09-03T03-44-39-252Z",
+	"task": "(injected fixture demo: bad-plan.json)",
+	"stages": [
+		{
+			"name": "plan",
+			"attempts": 3,
+			"outcome": "escalated",
+			"durationMs": 0,
+			"costUsd": 0,
+			"reflectionFired": true
+		}
+	],
+	"injected": true
+}
