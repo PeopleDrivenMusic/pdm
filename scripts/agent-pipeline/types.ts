@@ -15,13 +15,18 @@ export type Plan = {
 
 export type GateResult = { ok: true } | { ok: false; reason: string; failedRefs: PlanFileRef[] };
 
+export type Review = { verdict: 'approved' } | { verdict: 'needs-revision'; comments: string[] };
+
+export type ReviewRoundTrace = { round: number; verdict: Review['verdict']; commentCount: number };
+
 export type StageTrace = {
 	name: string;
 	attempts: number;
-	outcome: 'ok' | 'escalated';
+	outcome: 'ok' | 'escalated' | 'unapproved';
 	durationMs: number;
 	costUsd: number;
 	reflectionFired: boolean;
+	review?: ReviewRoundTrace[];
 };
 
 export type RunTrace = {
@@ -73,4 +78,12 @@ export function isPlan(value: unknown): value is Plan {
 		v.fileMap.every(isPlanFileRef) &&
 		isNonEmptyStringArray(v.verifyCommands)
 	);
+}
+
+export function isReview(value: unknown): value is Review {
+	if (typeof value !== 'object' || value === null) return false;
+	const v = value as Record<string, unknown>;
+	if (v.verdict === 'approved') return true;
+	if (v.verdict === 'needs-revision') return isNonEmptyStringArray(v.comments);
+	return false;
 }

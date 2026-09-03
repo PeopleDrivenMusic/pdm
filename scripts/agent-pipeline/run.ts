@@ -5,14 +5,20 @@ import { callAgent, execClaude } from './lib/callAgent.ts';
 import { groundingCheck } from './lib/groundingCheck.ts';
 import { loadAgent } from './lib/loadAgent.ts';
 import { reflect } from './lib/reflect.ts';
+import { renderPlanMarkdown } from './lib/renderPlanMarkdown.ts';
 import { runStage } from './lib/runStage.ts';
-import { writeEscalation, writeRunTrace } from './lib/trace.ts';
-import { isPlan, isSpec } from './types.ts';
-import type { Plan, RunTrace, Spec, StageTrace } from './types.ts';
+import { writeEscalation, writeReviewNotes, writeRunTrace } from './lib/trace.ts';
+import { isPlan, isReview, isSpec } from './types.ts';
+import type { Plan, Review, ReviewRoundTrace, RunTrace, Spec, StageTrace } from './types.ts';
 
 const PIPELINE_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(PIPELINE_DIR, '..', '..');
 const MAX_ATTEMPTS = 3;
+const MAX_REVIEW_ROUNDS = 3;
+
+const PLAN_AGENT_DIR = join(PIPELINE_DIR, 'agents', 'plan-agent');
+const SPEC_AGENT_DIR = join(PIPELINE_DIR, 'agents', 'spec-agent');
+const REVIEWER_AGENT_DIR = join(PIPELINE_DIR, 'agents', 'plan-reviewer');
 
 function timestamp(): string {
 	return new Date().toISOString().replace(/[:.]/g, '-');
@@ -80,12 +86,54 @@ function runReflectionIfNeeded(params: {
 	return result.fired;
 }
 
+function reflectFromReviewComments(runId: string, comments: string[]): boolean {
+	const config = loadAgent(PLAN_AGENT_DIR);
+	const prompt = `You are plan-agent. A reviewer found these issues with your plan:
+${comments.map((c) => `- ${c}`).join('\n')}
+
+In one sentence, name the concrete habit that caused this and one imperative
+rule that would prevent it next time. Reply with exactly one JSON object:
+{"triggerTag": "short-kebab-case-tag", "rule": "one imperative sentence"}.
+No markdown fences, no other text.`;
+	const result = reflect({
+		learningsPath: join(PLAN_AGENT_DIR, 'learnings.md'),
+		runId,
+		prompt,
+		callAgent: (p) => callAgent(config, p, execClaude)
+	});
+	return result.fired;
+}
+
+function reflectReviewerCalibration(runId: string, rounds: ReviewRoundTrace[]): boolean {
+	const config = loadAgent(REVIEWER_AGENT_DIR);
+	const roundsSummary = rounds
+		.map(
+			(r) =>
+				`round ${r.round}: ${r.verdict}${r.verdict === 'needs-revision' ? ` (${r.commentCount} comment(s))` : ''}`
+		)
+		.join('\n');
+	const prompt = `You are plan-reviewer. It took ${rounds.length} round(s) to reach a final verdict on one plan:
+${roundsSummary}
+
+In one sentence, reflect: were your earlier comments essential (a real
+defect against your rubric) or could you have approved sooner? Name one
+imperative calibration rule for next time. Reply with exactly one JSON
+object: {"triggerTag": "short-kebab-case-tag", "rule": "one imperative
+sentence"}. No markdown fences, no other text.`;
+	const result = reflect({
+		learningsPath: join(REVIEWER_AGENT_DIR, 'learnings.md'),
+		runId,
+		prompt,
+		callAgent: (p) => callAgent(config, p, execClaude)
+	});
+	return result.fired;
+}
+
 function runSpecStage(
 	task: string,
 	runDir: string
 ): { ok: true; spec: Spec; trace: StageTrace } | { ok: false; trace: StageTrace } {
-	const agentDir = join(PIPELINE_DIR, 'agents', 'spec-agent');
-	const config = loadAgent(agentDir);
+	const config = loadAgent(SPEC_AGENT_DIR);
 	const start = Date.now();
 	let costUsd = 0;
 
@@ -113,7 +161,7 @@ function runSpecStage(
 	const runId = basename(runDir);
 	const reflectionFired = runReflectionIfNeeded({
 		agentName: 'spec-agent',
-		agentDir,
+		agentDir: SPEC_AGENT_DIR,
 		task,
 		runId,
 		attempts: result.attempts,
@@ -143,17 +191,16 @@ function runSpecStage(
 	return { ok: true, spec: result.output, trace };
 }
 
-function runPlanStage(
-	task: string,
-	spec: Spec,
-	runDir: string
-): { ok: true; plan: Plan; trace: StageTrace } | { ok: false; trace: StageTrace } {
-	const agentDir = join(PIPELINE_DIR, 'agents', 'plan-agent');
-	const config = loadAgent(agentDir);
-	const start = Date.now();
+/** Retries plan-agent until groundingCheck passes (or MAX_ATTEMPTS is exhausted). */
+function generateGroundedPlan(
+	basePrompt: string,
+	runDir: string,
+	attemptPrefix: string,
+	groundingLog: string[]
+): { result: ReturnType<typeof runStage<Plan>>; costUsd: number; attemptCount: number } {
+	const config = loadAgent(PLAN_AGENT_DIR);
 	let costUsd = 0;
 	let attempt = 0;
-	const groundingLog: string[] = [];
 
 	const result = runStage<Plan>({
 		maxAttempts: MAX_ATTEMPTS,
@@ -162,14 +209,14 @@ function runPlanStage(
 			const r = callAgent(config, prompt, execClaude);
 			if (r.ok) {
 				costUsd += r.costUsd;
-				writeFileSync(join(runDir, `plan.attempt-${attempt}.json`), r.text);
+				writeFileSync(join(runDir, `${attemptPrefix}.attempt-${attempt}.json`), r.text);
 			}
 			return r;
 		},
 		buildPrompt: (lastError) =>
 			lastError
-				? `Spec:\n${JSON.stringify(spec, null, 2)}\n\nYour previous attempt was rejected: ${lastError}\n\nTry again.`
-				: `Spec:\n${JSON.stringify(spec, null, 2)}`,
+				? `${basePrompt}\n\nYour previous attempt was rejected: ${lastError}\n\nTry again.`
+				: basePrompt,
 		parseAndValidate: (text) => {
 			const parsed = parseJsonLoose<unknown>(text);
 			if (!parsed.ok) return parsed;
@@ -179,43 +226,227 @@ function runPlanStage(
 		},
 		gate: (plan) => {
 			const g = groundingCheck(plan, REPO_ROOT);
-			groundingLog.push(`attempt ${attempt}: ${g.ok ? 'PASS' : `FAIL — ${g.reason}`}`);
+			groundingLog.push(
+				`${attemptPrefix} attempt ${attempt}: ${g.ok ? 'PASS' : `FAIL — ${g.reason}`}`
+			);
 			return g;
 		}
 	});
 
-	writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
+	return { result, costUsd, attemptCount: attempt };
+}
 
-	const runId = basename(runDir);
-	const reflectionFired = runReflectionIfNeeded({
-		agentName: 'plan-agent',
-		agentDir,
-		task,
-		runId,
-		attempts: result.attempts,
-		lastError: result.ok ? undefined : result.lastError,
-		lastOutput: result.ok ? result.output : result.lastOutput
+/** Runs one plan-reviewer verdict call (with its own schema-retry, not a review round). */
+function callReviewer(
+	spec: Spec,
+	plan: Plan,
+	round: number,
+	isFinalRound: boolean
+): { result: ReturnType<typeof runStage<Review>>; costUsd: number } {
+	const config = loadAgent(REVIEWER_AGENT_DIR);
+	let costUsd = 0;
+	const basePrompt = `Spec:\n${JSON.stringify(spec, null, 2)}\n\nPlan (already grounding-checked):\n${JSON.stringify(
+		plan,
+		null,
+		2
+	)}${isFinalRound ? '\n\nThis is the final round (3 of 3).' : ''}`;
+
+	const result = runStage<Review>({
+		maxAttempts: MAX_ATTEMPTS,
+		callAgent: (prompt) => {
+			const r = callAgent(config, prompt, execClaude);
+			if (r.ok) costUsd += r.costUsd;
+			return r;
+		},
+		buildPrompt: (lastError) =>
+			lastError
+				? `${basePrompt}\n\nYour previous reply was rejected: ${lastError}\n\nReply again, JSON only.`
+				: basePrompt,
+		parseAndValidate: (text) => {
+			const parsed = parseJsonLoose<unknown>(text);
+			if (!parsed.ok) return parsed;
+			return isReview(parsed.value)
+				? { ok: true, value: parsed.value }
+				: { ok: false, reason: 'output did not match the Review schema (see types.ts isReview)' };
+		},
+		gate: () => ({ ok: true })
 	});
 
-	const trace: StageTrace = {
-		name: 'plan',
-		attempts: result.attempts,
-		outcome: result.ok ? 'ok' : 'escalated',
-		durationMs: Date.now() - start,
-		costUsd,
-		reflectionFired
-	};
+	return { result, costUsd };
+}
 
-	if (!result.ok) {
+type PlanStageResult =
+	| { ok: true; plan: Plan; approved: boolean; trace: StageTrace }
+	| { ok: false; trace: StageTrace };
+
+function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult {
+	const start = Date.now();
+	const runId = basename(runDir);
+	let totalCost = 0;
+	let totalAttempts = 0;
+	let reflectionFired = false;
+	const groundingLog: string[] = [];
+	const reviewRounds: ReviewRoundTrace[] = [];
+	let lastReviewComments: string[] = [];
+
+	const specPrompt = `Spec:\n${JSON.stringify(spec, null, 2)}`;
+	const initial = generateGroundedPlan(specPrompt, runDir, 'plan', groundingLog);
+	totalCost += initial.costUsd;
+	totalAttempts += initial.attemptCount;
+	reflectionFired =
+		runReflectionIfNeeded({
+			agentName: 'plan-agent',
+			agentDir: PLAN_AGENT_DIR,
+			task,
+			runId,
+			attempts: initial.attemptCount,
+			lastError: initial.result.ok ? undefined : initial.result.lastError,
+			lastOutput: initial.result.ok ? initial.result.output : initial.result.lastOutput
+		}) || reflectionFired;
+
+	if (!initial.result.ok) {
+		writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
 		writeEscalation(runDir, {
 			stageName: 'plan',
-			reason: result.lastError,
-			lastAttempt: result.lastOutput
+			reason: initial.result.lastError,
+			lastAttempt: initial.result.lastOutput
 		});
-		return { ok: false, trace };
+		return {
+			ok: false,
+			trace: {
+				name: 'plan',
+				attempts: totalAttempts,
+				outcome: 'escalated',
+				durationMs: Date.now() - start,
+				costUsd: totalCost,
+				reflectionFired,
+				review: []
+			}
+		};
 	}
 
-	return { ok: true, plan: result.output, trace };
+	let currentPlan = initial.result.output;
+	let approved = false;
+
+	for (let round = 1; round <= MAX_REVIEW_ROUNDS; round++) {
+		const isFinalRound = round === MAX_REVIEW_ROUNDS;
+		const { result: reviewResult, costUsd: reviewCost } = callReviewer(
+			spec,
+			currentPlan,
+			round,
+			isFinalRound
+		);
+		totalCost += reviewCost;
+		writeFileSync(
+			join(runDir, `review.round-${round}.json`),
+			JSON.stringify(
+				reviewResult.ok ? reviewResult.output : { schemaFailure: reviewResult.lastError },
+				null,
+				2
+			)
+		);
+
+		if (!reviewResult.ok) {
+			lastReviewComments = [
+				`plan-reviewer failed to return a valid verdict: ${reviewResult.lastError}`
+			];
+			reviewRounds.push({ round, verdict: 'needs-revision', commentCount: 1 });
+			break;
+		}
+
+		const review = reviewResult.output;
+		if (review.verdict === 'approved') {
+			reviewRounds.push({ round, verdict: 'approved', commentCount: 0 });
+			approved = true;
+			break;
+		}
+
+		lastReviewComments = review.comments;
+		reviewRounds.push({ round, verdict: 'needs-revision', commentCount: review.comments.length });
+		reflectionFired = reflectFromReviewComments(runId, review.comments) || reflectionFired;
+
+		if (isFinalRound) break;
+
+		const revisionPrompt = `Spec:\n${JSON.stringify(spec, null, 2)}\n\nYour previous plan:\n${JSON.stringify(
+			currentPlan,
+			null,
+			2
+		)}\n\nThe reviewer requested changes:\n${review.comments
+			.map((c) => `- ${c}`)
+			.join('\n')}\n\nRevise the plan to address these, keeping every fileMap citation grounded.`;
+		const revision = generateGroundedPlan(
+			revisionPrompt,
+			runDir,
+			`plan.review-${round}`,
+			groundingLog
+		);
+		totalCost += revision.costUsd;
+		totalAttempts += revision.attemptCount;
+		reflectionFired =
+			runReflectionIfNeeded({
+				agentName: 'plan-agent',
+				agentDir: PLAN_AGENT_DIR,
+				task,
+				runId,
+				attempts: revision.attemptCount,
+				lastError: revision.result.ok ? undefined : revision.result.lastError,
+				lastOutput: revision.result.ok ? revision.result.output : revision.result.lastOutput
+			}) || reflectionFired;
+
+		if (!revision.result.ok) {
+			writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
+			writeEscalation(runDir, {
+				stageName: 'plan',
+				reason: revision.result.lastError,
+				lastAttempt: revision.result.lastOutput
+			});
+			return {
+				ok: false,
+				trace: {
+					name: 'plan',
+					attempts: totalAttempts,
+					outcome: 'escalated',
+					durationMs: Date.now() - start,
+					costUsd: totalCost,
+					reflectionFired,
+					review: reviewRounds
+				}
+			};
+		}
+
+		currentPlan = revision.result.output;
+	}
+
+	writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
+
+	if (reviewRounds.length > 1) {
+		reflectionFired = reflectReviewerCalibration(runId, reviewRounds) || reflectionFired;
+	}
+
+	writeFileSync(join(runDir, 'plan.json'), JSON.stringify(currentPlan, null, 2));
+	writeFileSync(
+		join(runDir, 'plan.md'),
+		renderPlanMarkdown(currentPlan, { approved, comments: approved ? [] : lastReviewComments })
+	);
+
+	if (!approved) {
+		writeReviewNotes(runDir, { rounds: reviewRounds.length, comments: lastReviewComments });
+	}
+
+	return {
+		ok: true,
+		plan: currentPlan,
+		approved,
+		trace: {
+			name: 'plan',
+			attempts: totalAttempts,
+			outcome: approved ? 'ok' : 'unapproved',
+			durationMs: Date.now() - start,
+			costUsd: totalCost,
+			reflectionFired,
+			review: reviewRounds
+		}
+	};
 }
 
 function runPipeline(task: string, runDir: string): void {
@@ -247,12 +478,18 @@ function runPipeline(task: string, runDir: string): void {
 		return;
 	}
 
-	console.log(`pipeline OK — spec + plan written to runs/${basename(runDir)}/`);
+	if (!planResult.approved) {
+		console.log(
+			`pipeline done, NOT reviewer-approved — see runs/${basename(runDir)}/review-notes.md and plan.md`
+		);
+		return;
+	}
+
+	console.log(`pipeline OK, reviewer-approved — plan.md written to runs/${basename(runDir)}/`);
 }
 
 function runInjected(fixturePath: string, runDir: string): void {
 	const fixtureRaw = readFileSync(fixturePath, 'utf-8');
-	const agentDir = join(PIPELINE_DIR, 'agents', 'plan-agent');
 	let attempt = 0;
 	const groundingLog: string[] = [];
 
@@ -285,7 +522,7 @@ function runInjected(fixturePath: string, runDir: string): void {
 	const task = `(injected fixture demo: ${basename(fixturePath)})`;
 	const reflectionFired = runReflectionIfNeeded({
 		agentName: 'plan-agent',
-		agentDir,
+		agentDir: PLAN_AGENT_DIR,
 		task,
 		runId,
 		attempts: result.attempts,

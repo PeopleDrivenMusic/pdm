@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { writeEscalation, writeRunTrace } from './trace.ts';
+import { writeEscalation, writeReviewNotes, writeRunTrace } from './trace.ts';
 import type { RunTrace } from '../types.ts';
 
 describe('writeRunTrace', () => {
@@ -59,5 +59,28 @@ describe('writeEscalation', () => {
 		expect(written).toContain('plan');
 		expect(written).toContain("fileMap[0].path 'src/ghost.ts' does not exist");
 		expect(written).toContain('"decisions"');
+	});
+});
+
+describe('writeReviewNotes', () => {
+	let runDir: string;
+
+	beforeEach(() => {
+		runDir = mkdtempSync(join(tmpdir(), 'trace-'));
+	});
+
+	afterEach(() => {
+		rmSync(runDir, { recursive: true, force: true });
+	});
+
+	it('writes review-notes.md with the round count and every unresolved comment', () => {
+		writeReviewNotes(runDir, {
+			rounds: 3,
+			comments: ["Requirement 'per-view lazy loading' has no matching decision"]
+		});
+		const written = readFileSync(join(runDir, 'review-notes.md'), 'utf-8');
+		expect(written).toContain('3');
+		expect(written).toContain("Requirement 'per-view lazy loading' has no matching decision");
+		expect(written).toContain('final call is yours');
 	});
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPlan, isPlanFileRef, isSpec } from './types.ts';
+import { isPlan, isPlanFileRef, isReview, isSpec } from './types.ts';
 
 describe('isSpec', () => {
 	it('accepts a well-formed spec', () => {
@@ -102,5 +102,30 @@ describe('isPlan', () => {
 
 	it('rejects a plan with zero verifyCommands', () => {
 		expect(isPlan({ decisions: ['x'], fileMap: [validRef], verifyCommands: [] })).toBe(false);
+	});
+});
+
+describe('isReview', () => {
+	it('accepts an approved verdict with no comments field', () => {
+		expect(isReview({ verdict: 'approved' })).toBe(true);
+	});
+
+	it('accepts a needs-revision verdict with non-empty comments', () => {
+		expect(
+			isReview({ verdict: 'needs-revision', comments: ['add a fallback for the shop view'] })
+		).toBe(true);
+	});
+
+	it('rejects a needs-revision verdict with zero comments', () => {
+		expect(isReview({ verdict: 'needs-revision', comments: [] })).toBe(false);
+	});
+
+	it('rejects an unknown verdict', () => {
+		expect(isReview({ verdict: 'maybe' })).toBe(false);
+	});
+
+	it('rejects non-object input', () => {
+		expect(isReview(null)).toBe(false);
+		expect(isReview('approved')).toBe(false);
 	});
 });

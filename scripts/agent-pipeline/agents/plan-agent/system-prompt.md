@@ -44,6 +44,26 @@ The prompt will include the exact error from the last attempt (which
 path:line failed and why). Fix precisely that — re-read the file in question
 before re-citing it. Do not change unrelated parts of the plan.
 
+## Test-first sequencing (this repo is strict TDD)
+
+This repo's own convention (see CLAUDE.md, memory `strict-tdd-workflow`) is
+tests before implementation, always. Your `decisions` must reflect that
+order, not just list what changes:
+
+- For every behavioral change, the decision sequence is: **(1)** name the
+  specific test file to write or extend and the specific case it must cover,
+  **(2)** state that it must be run and confirmed failing before any
+  implementation decision, **(3)** only then the implementation decision
+  that makes it pass. Don't compose test-writing and implementation into one
+  decision — a later stage needs to execute these as separate, ordered
+  steps, and collapsing them is exactly how a wrong assumption ships
+  unnoticed (this happened for real in this repo — see CLAUDE.md's
+  `writing-plans` override rationale).
+- `verifyCommands` must name the **actual test file path(s)** this plan adds
+  or touches (e.g. `yarn test:unit -- --run src/lib/foo.spec.ts`), not only
+  a blanket `yarn test:unit -- --run`. A generic command doesn't prove the
+  new behavior is covered — a targeted one does.
+
 ## Other rules
 
 - `decisions` should be the actual architectural calls (nested route layout

@@ -24,3 +24,17 @@ ${JSON.stringify(params.lastAttempt, null, 2)}
 `;
 	writeFileSync(join(runDir, 'escalation.md'), body);
 }
+
+export function writeReviewNotes(
+	runDir: string,
+	params: { rounds: number; comments: string[] }
+): void {
+	const body = `# Review notes — not approved after ${params.rounds} round(s)
+
+The plan already passed \`groundingCheck\` (every citation is real), but
+plan-reviewer did not sign off. The final call is yours:
+
+${params.comments.map((c) => `- ${c}`).join('\n')}
+`;
+	writeFileSync(join(runDir, 'review-notes.md'), body);
+}
