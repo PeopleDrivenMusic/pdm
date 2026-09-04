@@ -1,0 +1,27 @@
+{
+	"problem": "Artist page tabs are currently client-only state (activeTab) instead of URL-addressable routes, making individual views non-shareable and requiring inefficient data management. Navigation between tabs causes unnecessary refetches due to the monolithic load design.",
+	"requirements": [
+		"Create nested route structure: migrate from /artist/[slug]/ to /artist/[slug]/[view]/ where [view] is one of: feed, music, posts, photos, videos, shop",
+		"Split per-view data loading: refactor +page.server.ts to lazy-load only the data needed for each view, triggered on first navigation to that view",
+		"Implement client-side view caching: cache loaded view data in a Svelte store so navigating away and back to an already-loaded view does NOT refetch or invalidate",
+		"Implement URL-driven navigation: update +page.svelte to navigate via goto(url) on tab clicks instead of mutating activeTab state, and derive activeTab from URL params",
+		"Prevent page reload on navigation: use SvelteKit's client-side goto() instead of full-page navigations or invalidateAll()",
+		"Handle missing/invalid view param: default to 'feed' view if [view] param is missing or invalid; preserve existing 404 behavior for invalid artist slug",
+		"Support direct URL access: users can navigate directly to /artist/[slug]/music or /artist/[slug]/posts and see the correct view with its data loaded"
+	],
+	"outOfScope": [
+		"Refactoring the Tabs component to handle generic URL routing (keep it view-agnostic)",
+		"Changing artist profile data or subscription logic (only reorganize data flow, not business logic)",
+		"Implementing Shop view functionality (already stubbed as 'coming soon', no data loading needed yet)",
+		"Adding new views or tabs beyond the current six",
+		"SEO optimizations like canonical URLs or structured markup per view"
+	],
+	"filesLikely": [
+		"src/routes/(app)/artist/[slug]/+page.server.ts",
+		"src/routes/(app)/artist/[slug]/+page.svelte",
+		"src/routes/(app)/artist/[slug]/+layout.server.ts",
+		"src/lib/stores/artist-view-cache.svelte.ts",
+		"src/routes/(app)/artist/[slug]/[view]/+page.server.ts",
+		"src/routes/(app)/artist/[slug]/[view]/+page.svelte"
+	]
+}

@@ -55,11 +55,19 @@ export function callAgent(config: AgentConfig, prompt: string, exec: ExecFn): Ca
 	}
 
 	const usage = (parsed.usage as Record<string, unknown>) ?? {};
+	const num = (key: string): number =>
+		typeof usage[key] === 'number' ? (usage[key] as number) : 0;
+	// Most of a real turn's input is cached (system prompt, tool defs), not
+	// "fresh" — usage.input_tokens alone undercounts by orders of magnitude
+	// (a live probe: input_tokens:2 but cache_read_input_tokens:17972 on the
+	// same $0.12 call). Sum all three so inputTokens reflects what was
+	// actually read, matching what total_cost_usd already bills for.
 	return {
 		ok: true,
 		text: typeof parsed.result === 'string' ? parsed.result : '',
 		costUsd: typeof parsed.total_cost_usd === 'number' ? parsed.total_cost_usd : 0,
-		inputTokens: typeof usage.input_tokens === 'number' ? usage.input_tokens : 0,
-		outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : 0
+		inputTokens:
+			num('input_tokens') + num('cache_read_input_tokens') + num('cache_creation_input_tokens'),
+		outputTokens: num('output_tokens')
 	};
 }

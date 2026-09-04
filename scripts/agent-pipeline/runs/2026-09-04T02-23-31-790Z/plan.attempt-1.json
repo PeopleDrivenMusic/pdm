@@ -1,0 +1,122 @@
+{
+	"decisions": [
+		"Move artist resolution and viewer/entitlement computation out of `+page.server.ts` into a new `src/routes/(app)/artist/[slug]/+layout.server.ts` (currently `+page.server.ts:8` for the 404 slug lookup and `+page.server.ts:19-37` for the subscriber/viewer flags) so it runs once per artist and is NOT re-run by SvelteKit when only the `[view]` segment changes; this is what makes the shared header/subscribe-CTA/ChatWidget data (not the per-view content) free of refetch on tab switches.",
+		"Write `src/routes/(app)/artist/[slug]/layout.server.spec.ts` first, modeled on the event-object-literal pattern in `src/routes/api/artist/[id]/subscription/server.spec.ts:10-18` (mocking `$lib/db/queries` and `$lib/server/entitlement`), covering: throws 404 when `ArtistService.getArtistBySlug` resolves null; `viewer.isOwner`/`isSubscribed` true when `locals.user.id === artist.userId`; `EntitlementService.isSubscriberOf` is called and `canSubscribe` is true for a logged-in non-owner non-subscriber. Run `yarn test:unit -- --run` against it and confirm it fails (module doesn't exist yet) before writing `+layout.server.ts`.",
+		"Only then implement `+layout.server.ts` by moving the logic from `+page.server.ts:8-11` and `:19-37`, unchanged in behavior, and confirm the test goes green.",
+		"Reduce the old `src/routes/(app)/artist/[slug]/+page.server.ts` load to a one-line `redirect(307, `/artist/${params.slug}/feed`)` (trivial, no dedicated test) so `/artist/[slug]` with no view still resolves to the feed view, satisfying 'missing view param' without touching routing/matchers.",
+		"Move the `votePoll` action (current `+page.server.ts:74-100`) into a NEW `src/routes/(app)/artist/[slug]/[view]/+page.server.ts` that exports ONLY `actions` (no `load`) — a load export there would force SvelteKit to always hit the server before the universal load runs, defeating the cache. Actions-only server files are a valid SvelteKit pattern and this one dynamic route matches every view value, so voting keeps working from any tab exactly as today.",
+		"Write `src/routes/(app)/artist/[slug]/view.spec.ts` first for a new pure helper `resolveView(view: string | undefined): ViewId` (in a new `src/routes/(app)/artist/[slug]/view.ts`) covering: known ids pass through unchanged; `undefined` and an unknown string both resolve to `'feed'`. Run it and confirm red before writing `view.ts`.",
+		"Implement `view.ts` exporting `ARTIST_VIEWS` (the 6 ids) and `resolveView`; reuse it in the `[view]/+page.ts` load below to redirect invalid `[view]` segments to `/artist/[slug]/feed`.",
+		"Write `src/lib/stores/artist-view-cache.svelte.spec.ts` first, modeled on the mocking style in `src/lib/studio/music/uploadController.svelte.spec.ts:11` (`vi.mock('$app/navigation', ...)` is not needed here, but the same isolated-store-testing approach applies) and the class-store shape of `src/lib/stores/chat.svelte.ts:22-58`. Cases: calling `get(key, fetcher)` twice with the same key returns the exact same promise reference and calls `fetcher` only once (proves no second network call); a different key calls `fetcher` again and stores a separate promise. Run it and confirm red.",
+		"Implement `src/lib/stores/artist-view-cache.svelte.ts` as a class-based store (same shape as `ChatStore` in `chat.svelte.ts:22-58`, private `Map<string, Promise<unknown>>` keyed by `` `${slug}:${view}` ``, a `get(key, fetcher)` method that returns the cached promise if present or creates+stores+returns a new one) until the test goes green.",
+		"Write `src/routes/api/artist/[slug]/[view]/server.spec.ts` first, modeled directly on `src/routes/api/artist/[id]/subscription/server.spec.ts:1-38`'s event-object + `vi.mock` style. Cases: GET with `view=music` calls `TrackService.getTracksByArtist` (`src/lib/db/queries.ts:377`) and `AlbumService.getAlbumsByArtist` (`src/lib/db/queries.ts:919`) but NOT `ArtistPublicContentService.getArtistContent`; GET with `view=photos`/`videos`/`feed`/`posts` calls `getArtistContent` (`src/lib/db/services/ContentService.ts:1114`) and, for feed/posts, also the track/album services; GET with `view=shop` or an unrecognized view calls neither and returns 200 with an empty payload; GET 404s when `ArtistService.getArtistBySlug` resolves null (this endpoint is fetched independently of the layout, so it must re-resolve the artist itself). Run and confirm red.",
+		"Implement the endpoint reusing `ArtistPublicContentService.getArtistContent`, `TrackService.getTracksByArtist`, `AlbumService.getAlbumsByArtist`, and `EntitlementService.isSubscriberOf` (`src/lib/server/entitlement/EntitlementService.ts:9`) completely unchanged — no business-logic edits, only which calls fire per `params.view`. This is the actual 'lazy-load only what a view needs' behavior; `ArtistPublicContentService.getArtistContent` itself stays monolithic (out of scope) but is simply not invoked for the `music`/`shop` views.",
+		"Write `src/routes/(app)/artist/[slug]/[view]/page.spec.ts` first for the new `+page.ts` universal load, mocking the `artistViewCache` module and `event.fetch`. Cases: cache miss calls `event.fetch('/api/artist/.../<view>')` and stores the resulting promise in the cache under `` `${slug}:${view}` ``; cache hit returns the cached promise WITHOUT calling `event.fetch` again; an invalid `params.view` triggers `redirect(307, '.../feed')` via `resolveView`. Run and confirm red.",
+		"Implement `[view]/+page.ts` (universal load, not `+page.server.ts`, so it can consult the client-side cache store and skip the network call entirely on a hit) calling `artistViewCache.get(key, () => event.fetch(...).then(r => r.json()))` and returning the (possibly still-pending) promise un-awaited under `content`/`tracks`/`albums` keys — this preserves the existing `{#await content}` streaming/skeleton contract already used by `ArtistFeed.svelte`, `ArtistTracks.svelte`, etc., so those components render unchanged whether the promise is fresh or reused from cache.",
+		"Retype the shared view components' props: currently `ArtistFeed.svelte:2` (and `ArtistPosts`, `ArtistPhotos`, `ArtistVideos`, `ArtistTracks`, `ArtistAlbums`) import prop types via `PageData` from `'../$types'`, which was generated from the old `[slug]`-level `+page.server.ts`. Since that route no longer produces `tracks`/`albums`/`content`, repoint these prop types to the named service types directly — `PublicArtistContent` (`src/lib/db/services/ContentService.ts:144`) for `content`, and the inferred return types of `TrackService.getTracksByArtist`/`AlbumService.getAlbumsByArtist` for `tracks`/`albums` — so the components stay decoupled from any single route's generated types and work under any `[view]` value.",
+		"Move `+page.svelte` to `src/routes/(app)/artist/[slug]/[view]/+page.svelte`. Keep `Tabs` (`src/lib/ui/Tabs.svelte`) completely unchanged (out of scope) — it still requires a `$bindable` `activeTab` and internally reassigns it on click (`Tabs.svelte:67`), so bind a local `activeTab = $state(...)` to it (not a `$derived`, which isn't a valid two-way bind target) and add an `onTabChange` callback that calls `goto(`/artist/${artist.slug}/${tab.id}`, { noScroll: true, keepFocus: true })` instead of relying on the old bare `bind:activeTab` at `+page.svelte:85`. Add an `$effect` that resyncs the local `activeTab` whenever `page.params.view` changes (covers back/forward and direct links), replacing the plain `let activeTab = $state(tabs[0])` at `+page.svelte:31`.",
+		"Do not call `invalidateAll()` anywhere in the new navigation path — `src/lib/client/subscription.ts:16` is the existing (and here inapplicable) example of that pattern; it's fine as-is for the subscribe/unsubscribe flow but must not be copied for tab navigation.",
+		"No unit-test infrastructure in this repo currently mounts a `+page.svelte`/exercises `$app/navigation`+`$app/state` together (confirmed: no `+page.svelte.spec.ts` exists anywhere in `src/routes`), so the goto-on-click / URL-derived-activeTab wiring in the moved `+page.svelte` is verified manually: run `yarn dev`, click through all 6 tabs confirming the URL updates and no full reload/flash occurs, then hit `/artist/<slug>/music` and `/artist/<slug>/posts` directly to confirm direct URL access works, and `/artist/<slug>/bogus` to confirm it redirects to `feed`. Call this out explicitly rather than silently skipping it."
+	],
+	"fileMap": [
+		{
+			"path": "src/routes/(app)/artist/[slug]/+page.server.ts",
+			"line": 8,
+			"reason": "current artist-lookup + 404 check that moves into the new +layout.server.ts so it runs once per artist, not per view"
+		},
+		{
+			"path": "src/routes/(app)/artist/[slug]/+page.server.ts",
+			"line": 19,
+			"reason": "current subscriber/viewer computation that moves into +layout.server.ts unchanged"
+		},
+		{
+			"path": "src/routes/(app)/artist/[slug]/+page.server.ts",
+			"line": 74,
+			"reason": "votePoll action that must move to a new actions-only [view]/+page.server.ts (no load export, to avoid forcing a server round-trip that would defeat the client cache)"
+		},
+		{
+			"path": "src/routes/(app)/artist/[slug]/+page.svelte",
+			"line": 31,
+			"reason": "current local activeTab $state(tabs[0]) to replace with a $state kept in sync with page.params.view via an $effect"
+		},
+		{
+			"path": "src/routes/(app)/artist/[slug]/+page.svelte",
+			"line": 85,
+			"reason": "current bare bind:activeTab Tabs usage with no onTabChange — needs an onTabChange handler that calls goto()"
+		},
+		{
+			"path": "src/lib/ui/Tabs.svelte",
+			"line": 67,
+			"reason": "Tabs' internal click() reassigns the bound activeTab directly, which is why the bind target in +page.svelte must stay a real $state (not a $derived) synced from the URL"
+		},
+		{
+			"path": "src/lib/stores/chat.svelte.ts",
+			"line": 22,
+			"reason": "existing class-based rune store pattern (private Map, module-level singleton export) to model the new artist-view-cache store after"
+		},
+		{
+			"path": "src/lib/client/subscription.ts",
+			"line": 16,
+			"reason": "existing invalidateAll() usage — the pattern the new view navigation must explicitly avoid"
+		},
+		{
+			"path": "src/lib/db/services/ContentService.ts",
+			"line": 144,
+			"reason": "PublicArtistContent type that shared view components should type their `content` prop against directly, instead of a generated PageData tied to one route"
+		},
+		{
+			"path": "src/lib/db/services/ContentService.ts",
+			"line": 1114,
+			"reason": "getArtistContent signature the new /api/artist/[slug]/[view] endpoint reuses unchanged for the feed/posts/photos/videos views"
+		},
+		{
+			"path": "src/lib/db/queries.ts",
+			"line": 377,
+			"reason": "getTracksByArtist reused unchanged by the new endpoint for the music and feed views"
+		},
+		{
+			"path": "src/lib/db/queries.ts",
+			"line": 919,
+			"reason": "getAlbumsByArtist reused unchanged by the new endpoint for the music view"
+		},
+		{
+			"path": "src/lib/server/entitlement/EntitlementService.ts",
+			"line": 9,
+			"reason": "isSubscriberOf reused by both +layout.server.ts and the new per-view endpoint, since they run as separate requests and each needs the locked-content flag independently"
+		},
+		{
+			"path": "src/routes/api/artist/[id]/subscription/+server.ts",
+			"line": 6,
+			"reason": "existing +server.ts structure (plain event handler, no extra framework) to model the new endpoint after"
+		},
+		{
+			"path": "src/routes/api/artist/[id]/subscription/server.spec.ts",
+			"line": 10,
+			"reason": "existing event-object-literal + vi.mock test pattern to reuse for the new endpoint's and +layout.server.ts's TDD tests"
+		},
+		{
+			"path": "src/lib/studio/music/uploadController.svelte.spec.ts",
+			"line": 11,
+			"reason": "existing pattern for testing a .svelte.ts store/module in isolation with mocked deps, reused for the artist-view-cache store test"
+		},
+		{
+			"path": "src/routes/(app)/artist/[slug]/components/ArtistFeed.svelte",
+			"line": 2,
+			"reason": "shared content component currently types its prop via PageData from '../$types', which breaks once the [slug]-level route stops producing tracks/albums/content"
+		},
+		{
+			"path": "vite.config.ts",
+			"line": 110,
+			"reason": "client vitest project only picks up *.svelte.{test,spec}.ts — confirms the cache store test file must keep that suffix to run in the browser project"
+		}
+	],
+	"verifyCommands": [
+		"yarn test:unit -- --run src/routes/(app)/artist/[slug]/view.spec.ts",
+		"yarn test:unit -- --run src/lib/stores/artist-view-cache.svelte.spec.ts",
+		"yarn test:unit -- --run src/routes/api/artist/[slug]/[view]/server.spec.ts",
+		"yarn test:unit -- --run src/routes/(app)/artist/[slug]/layout.server.spec.ts",
+		"yarn test:unit -- --run src/routes/(app)/artist/[slug]/[view]/page.spec.ts",
+		"yarn check",
+		"yarn lint"
+	]
+}

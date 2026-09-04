@@ -1,0 +1,8 @@
+{
+	"verdict": "needs-revision",
+	"comments": [
+		"Requirement 'Split per-view data loading: refactor +page.server.ts' has no decision handling the existing `votePoll` action (src/routes/(app)/artist/[slug]/+page.server.ts:74-100). Decision #3 reduces this file to a one-line redirect load, and no other decision creates actions on the new `[view]/+page.server.ts` — the fileMap entry for line 74 flags that votePoll 'must move' there, but no decision item actually performs that move, and no spec/verifyCommand covers it. As written, poll voting on the artist page silently breaks after the migration (the form action posts to the `[view]` route, which would have no matching action).",
+		"Decision #3's redirect snippet is broken: `redirect(307, \\`/artist/${params.slug}/feed}\\`)` has a stray closing brace before the closing backtick, producing a literal `.../feed}` URL. This is the entry point for every existing `/artist/[slug]` link and for requirement 6 (default to 'feed' when view is missing) — as written it doesn't satisfy that requirement, it redirects to a broken URL.",
+		"No verifyCommand exercises the root `+page.server.ts` redirect at all — it's deferred to a manual `yarn dev` click-through (decision #3 and the final manual-verification step). Given that reliance on manual-only checking, the typo above would not be caught by any of the listed verifyCommands; a one-line automated spec (or including it in an existing spec) is needed for this load-bearing entry-point behavior."
+	]
+}

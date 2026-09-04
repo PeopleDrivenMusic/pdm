@@ -35,6 +35,32 @@ describe('callAgent', () => {
 		});
 	});
 
+	it('folds cache_read/cache_creation input tokens into inputTokens (most of a real turn is cached context, not fresh input)', () => {
+		// Live probe (2026-09-03): a real call returned usage.input_tokens: 2 but
+		// cache_read_input_tokens: 17972 and cache_creation_input_tokens: 29109 —
+		// counting only input_tokens would report a $0.12 call as costing ~2 tokens
+		// of input, which is misleading for a per-run cost/token report.
+		const stdout = JSON.stringify({
+			is_error: false,
+			result: 'OK',
+			total_cost_usd: 0.12,
+			usage: {
+				input_tokens: 2,
+				cache_read_input_tokens: 17972,
+				cache_creation_input_tokens: 29109,
+				output_tokens: 4
+			}
+		});
+		const result = callAgent(config, 'Reply with OK', fakeExec(stdout));
+		expect(result).toEqual({
+			ok: true,
+			text: 'OK',
+			costUsd: 0.12,
+			inputTokens: 2 + 17972 + 29109,
+			outputTokens: 4
+		});
+	});
+
 	it('returns ok:false when the CLI body reports is_error:true', () => {
 		const stdout = JSON.stringify({
 			is_error: true,

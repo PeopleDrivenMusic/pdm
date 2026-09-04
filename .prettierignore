@@ -13,6 +13,10 @@ bun.lockb
 supabase/.temp/
 
 # Raw per-attempt agent output committed as evidence — verbatim LLM text,
-# not guaranteed to be well-formed JSON on its own (may still carry a
-# ```json fence prettier can't parse).
+# not guaranteed to be well-formed JSON on its own (may carry a ```json
+# fence, or even preamble text before it — a real run had an attempt start
+# with "Now producing the revised plan JSON." before the fence, which is
+# exactly the kind of malformed reply the schema-retry loop exists to catch;
+# the raw file is kept verbatim as evidence of that, not reformatted).
 scripts/agent-pipeline/runs/**/plan.attempt-*.json
+scripts/agent-pipeline/runs/**/plan.review-*.json

@@ -57,7 +57,11 @@ genuine lesson recorded this way.
   reviewer verdict call.
 - `lib/callAgent.ts` — wraps `claude -p --output-format json`. Keys off the
   JSON body's `is_error`, never the process exit code (a live probe showed
-  the CLI can return `is_error:false` with a nonzero exit).
+  the CLI can return `is_error:false` with a nonzero exit). `inputTokens` is
+  `input_tokens + cache_read_input_tokens + cache_creation_input_tokens` —
+  a real run showed `input_tokens` alone under-reports by orders of
+  magnitude (2 vs. ~47k), since most of a turn's context is cached system
+  prompt/tool defs, not fresh input.
 - `lib/renderPlanMarkdown.ts` — pure renderer, `plan.json` → `plan.md`
   (numbered decisions, a file:line:reason table, the verify commands, and a
   review-status section). `plan.json` stays the single source every
