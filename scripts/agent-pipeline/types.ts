@@ -19,13 +19,17 @@ export type Review = { verdict: 'approved' } | { verdict: 'needs-revision'; comm
 
 export type ReviewRoundTrace = { round: number; verdict: Review['verdict']; commentCount: number };
 
+export type LessonRecord = { agent: string; triggerTag: string; rule: string; promoted: boolean };
+
+export type Usage = { costUsd: number; inputTokens: number; outputTokens: number };
+
 export type StageTrace = {
 	name: string;
 	attempts: number;
 	outcome: 'ok' | 'escalated' | 'unapproved';
 	durationMs: number;
-	costUsd: number;
-	reflectionFired: boolean;
+	usage: Usage;
+	lessons: LessonRecord[];
 	review?: ReviewRoundTrace[];
 };
 
@@ -33,6 +37,8 @@ export type RunTrace = {
 	runId: string;
 	task: string;
 	stages: StageTrace[];
+	totals: Usage & { durationMs: number };
+	outcome: 'ok' | 'escalated' | 'unapproved';
 	injected: boolean;
 };
 

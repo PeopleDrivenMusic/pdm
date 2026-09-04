@@ -6,10 +6,21 @@ import { groundingCheck } from './lib/groundingCheck.ts';
 import { loadAgent } from './lib/loadAgent.ts';
 import { reflect } from './lib/reflect.ts';
 import { renderPlanMarkdown } from './lib/renderPlanMarkdown.ts';
+import { renderReportHtml } from './lib/renderReportHtml.ts';
 import { runStage } from './lib/runStage.ts';
 import { writeEscalation, writeReviewNotes, writeRunTrace } from './lib/trace.ts';
 import { isPlan, isReview, isSpec } from './types.ts';
-import type { Plan, Review, ReviewRoundTrace, RunTrace, Spec, StageTrace } from './types.ts';
+import type {
+	LessonRecord,
+	Plan,
+	Review,
+	ReviewRoundTrace,
+	RunTrace,
+	Spec,
+	StageTrace,
+	Usage
+} from './types.ts';
+import type { CallAgentResult } from './lib/callAgent.ts';
 
 const PIPELINE_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(PIPELINE_DIR, '..', '..');
@@ -20,8 +31,78 @@ const PLAN_AGENT_DIR = join(PIPELINE_DIR, 'agents', 'plan-agent');
 const SPEC_AGENT_DIR = join(PIPELINE_DIR, 'agents', 'spec-agent');
 const REVIEWER_AGENT_DIR = join(PIPELINE_DIR, 'agents', 'plan-reviewer');
 
+// Fixed per-agent triggerTag vocabularies. Without this, two reflection calls
+// on the *same* underlying mistake can each invent a differently-worded tag
+// (observed live: 'unread-line-citation' vs 'unverified-filemap-line' for the
+// identical failure across two runs) — the promotion counter in learnings.ts
+// matches by exact tag string, so a free-text tag silently defeats it. A
+// closed vocabulary makes recurrence detectable instead of a coin flip.
+const SPEC_AGENT_TAGS = [
+	'unverified-file-path',
+	'vague-requirement',
+	'missing-out-of-scope',
+	'other'
+];
+const PLAN_AGENT_TAGS = [
+	'stale-line-citation',
+	'unverified-file-path',
+	'unrequested-scope',
+	'missing-test-first-sequencing',
+	'spec-requirement-gap',
+	'vague-verify-commands',
+	'other'
+];
+const REVIEWER_TAGS = [
+	'flagged-out-of-scope-item',
+	'flagged-style-preference',
+	'appropriately-blocked',
+	'other'
+];
+
+function tagInstruction(allowedTags: string[]): string {
+	return `Pick the closest matching triggerTag from this fixed list — do not invent a new one: ${allowedTags.join(', ')}. Use "other" only if truly none fit.`;
+}
+
 function timestamp(): string {
 	return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+function emptyUsage(): Usage {
+	return { costUsd: 0, inputTokens: 0, outputTokens: 0 };
+}
+
+function addUsage(target: Usage, r: Extract<CallAgentResult, { ok: true }>): void {
+	target.costUsd += r.costUsd;
+	target.inputTokens += r.inputTokens;
+	target.outputTokens += r.outputTokens;
+}
+
+function mergeUsage(target: Usage, src: Usage): void {
+	target.costUsd += src.costUsd;
+	target.inputTokens += src.inputTokens;
+	target.outputTokens += src.outputTokens;
+}
+
+function computeOutcome(stages: StageTrace[]): RunTrace['outcome'] {
+	if (stages.some((s) => s.outcome === 'escalated')) return 'escalated';
+	if (stages.some((s) => s.outcome === 'unapproved')) return 'unapproved';
+	return 'ok';
+}
+
+function computeTotals(stages: StageTrace[]): RunTrace['totals'] {
+	const totals = { costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 0 };
+	for (const s of stages) {
+		totals.costUsd += s.usage.costUsd;
+		totals.inputTokens += s.usage.inputTokens;
+		totals.outputTokens += s.usage.outputTokens;
+		totals.durationMs += s.durationMs;
+	}
+	return totals;
+}
+
+function writeReport(runDir: string, trace: RunTrace): void {
+	writeRunTrace(runDir, trace);
+	writeFileSync(join(runDir, 'report.html'), renderReportHtml(trace));
 }
 
 function parseJsonLoose<T>(text: string): { ok: true; value: T } | { ok: false; reason: string } {
@@ -42,7 +123,8 @@ function buildReflectionPrompt(
 	task: string,
 	lastError: string | undefined,
 	lastOutput: unknown,
-	attempts: number
+	attempts: number,
+	allowedTags: string[]
 ): string {
 	return `You are ${agentName}, reflecting on your own performance on this task: "${task}".
 
@@ -54,28 +136,31 @@ Your last output was:
 ${JSON.stringify(lastOutput, null, 2)}
 
 In one sentence, name the concrete mistake pattern that caused the retry, and
-one imperative rule that would have prevented it on the first attempt. Reply
-with exactly one JSON object: {"triggerTag": "short-kebab-case-tag", "rule":
-"one imperative sentence"}. No markdown fences, no other text.`;
+one imperative rule that would have prevented it on the first attempt. ${tagInstruction(
+		allowedTags
+	)} Reply with exactly one JSON object: {"triggerTag": "...", "rule": "one
+imperative sentence"}. No markdown fences, no other text.`;
 }
 
 function runReflectionIfNeeded(params: {
 	agentName: string;
 	agentDir: string;
+	allowedTags: string[];
 	task: string;
 	runId: string;
 	attempts: number;
 	lastError: string | undefined;
 	lastOutput: unknown;
-}): boolean {
-	if (params.attempts <= 1) return false;
+}): LessonRecord | null {
+	if (params.attempts <= 1) return null;
 	const config = loadAgent(params.agentDir);
 	const prompt = buildReflectionPrompt(
 		params.agentName,
 		params.task,
 		params.lastError,
 		params.lastOutput,
-		params.attempts
+		params.attempts,
+		params.allowedTags
 	);
 	const result = reflect({
 		learningsPath: join(params.agentDir, 'learnings.md'),
@@ -83,28 +168,44 @@ function runReflectionIfNeeded(params: {
 		prompt,
 		callAgent: (p) => callAgent(config, p, execClaude)
 	});
-	return result.fired;
+	if (!result.fired) return null;
+	return {
+		agent: params.agentName,
+		triggerTag: result.triggerTag,
+		rule: result.rule,
+		promoted: result.promoted
+	};
 }
 
-function reflectFromReviewComments(runId: string, comments: string[]): boolean {
+function reflectFromReviewComments(runId: string, comments: string[]): LessonRecord | null {
 	const config = loadAgent(PLAN_AGENT_DIR);
 	const prompt = `You are plan-agent. A reviewer found these issues with your plan:
 ${comments.map((c) => `- ${c}`).join('\n')}
 
 In one sentence, name the concrete habit that caused this and one imperative
-rule that would prevent it next time. Reply with exactly one JSON object:
-{"triggerTag": "short-kebab-case-tag", "rule": "one imperative sentence"}.
-No markdown fences, no other text.`;
+rule that would prevent it next time. ${tagInstruction(
+		PLAN_AGENT_TAGS
+	)} Reply with exactly one JSON object: {"triggerTag": "...", "rule": "one
+imperative sentence"}. No markdown fences, no other text.`;
 	const result = reflect({
 		learningsPath: join(PLAN_AGENT_DIR, 'learnings.md'),
 		runId,
 		prompt,
 		callAgent: (p) => callAgent(config, p, execClaude)
 	});
-	return result.fired;
+	if (!result.fired) return null;
+	return {
+		agent: 'plan-agent',
+		triggerTag: result.triggerTag,
+		rule: result.rule,
+		promoted: result.promoted
+	};
 }
 
-function reflectReviewerCalibration(runId: string, rounds: ReviewRoundTrace[]): boolean {
+function reflectReviewerCalibration(
+	runId: string,
+	rounds: ReviewRoundTrace[]
+): LessonRecord | null {
 	const config = loadAgent(REVIEWER_AGENT_DIR);
 	const roundsSummary = rounds
 		.map(
@@ -117,16 +218,23 @@ ${roundsSummary}
 
 In one sentence, reflect: were your earlier comments essential (a real
 defect against your rubric) or could you have approved sooner? Name one
-imperative calibration rule for next time. Reply with exactly one JSON
-object: {"triggerTag": "short-kebab-case-tag", "rule": "one imperative
-sentence"}. No markdown fences, no other text.`;
+imperative calibration rule for next time. ${tagInstruction(
+		REVIEWER_TAGS
+	)} Reply with exactly one JSON object: {"triggerTag": "...", "rule": "one
+imperative sentence"}. No markdown fences, no other text.`;
 	const result = reflect({
 		learningsPath: join(REVIEWER_AGENT_DIR, 'learnings.md'),
 		runId,
 		prompt,
 		callAgent: (p) => callAgent(config, p, execClaude)
 	});
-	return result.fired;
+	if (!result.fired) return null;
+	return {
+		agent: 'plan-reviewer',
+		triggerTag: result.triggerTag,
+		rule: result.rule,
+		promoted: result.promoted
+	};
 }
 
 function runSpecStage(
@@ -135,13 +243,13 @@ function runSpecStage(
 ): { ok: true; spec: Spec; trace: StageTrace } | { ok: false; trace: StageTrace } {
 	const config = loadAgent(SPEC_AGENT_DIR);
 	const start = Date.now();
-	let costUsd = 0;
+	const usage = emptyUsage();
 
 	const result = runStage<Spec>({
 		maxAttempts: MAX_ATTEMPTS,
 		callAgent: (prompt) => {
 			const r = callAgent(config, prompt, execClaude);
-			if (r.ok) costUsd += r.costUsd;
+			if (r.ok) addUsage(usage, r);
 			return r;
 		},
 		buildPrompt: (lastError) =>
@@ -159,23 +267,26 @@ function runSpecStage(
 	});
 
 	const runId = basename(runDir);
-	const reflectionFired = runReflectionIfNeeded({
+	const lessons: LessonRecord[] = [];
+	const lesson = runReflectionIfNeeded({
 		agentName: 'spec-agent',
 		agentDir: SPEC_AGENT_DIR,
+		allowedTags: SPEC_AGENT_TAGS,
 		task,
 		runId,
 		attempts: result.attempts,
 		lastError: result.ok ? undefined : result.lastError,
 		lastOutput: result.ok ? result.output : result.lastOutput
 	});
+	if (lesson) lessons.push(lesson);
 
 	const trace: StageTrace = {
 		name: 'spec',
 		attempts: result.attempts,
 		outcome: result.ok ? 'ok' : 'escalated',
 		durationMs: Date.now() - start,
-		costUsd,
-		reflectionFired
+		usage,
+		lessons
 	};
 
 	if (!result.ok) {
@@ -197,9 +308,9 @@ function generateGroundedPlan(
 	runDir: string,
 	attemptPrefix: string,
 	groundingLog: string[]
-): { result: ReturnType<typeof runStage<Plan>>; costUsd: number; attemptCount: number } {
+): { result: ReturnType<typeof runStage<Plan>>; usage: Usage; attemptCount: number } {
 	const config = loadAgent(PLAN_AGENT_DIR);
-	let costUsd = 0;
+	const usage = emptyUsage();
 	let attempt = 0;
 
 	const result = runStage<Plan>({
@@ -208,7 +319,7 @@ function generateGroundedPlan(
 			attempt++;
 			const r = callAgent(config, prompt, execClaude);
 			if (r.ok) {
-				costUsd += r.costUsd;
+				addUsage(usage, r);
 				writeFileSync(join(runDir, `${attemptPrefix}.attempt-${attempt}.json`), r.text);
 			}
 			return r;
@@ -233,7 +344,7 @@ function generateGroundedPlan(
 		}
 	});
 
-	return { result, costUsd, attemptCount: attempt };
+	return { result, usage, attemptCount: attempt };
 }
 
 /** Runs one plan-reviewer verdict call (with its own schema-retry, not a review round). */
@@ -242,9 +353,9 @@ function callReviewer(
 	plan: Plan,
 	round: number,
 	isFinalRound: boolean
-): { result: ReturnType<typeof runStage<Review>>; costUsd: number } {
+): { result: ReturnType<typeof runStage<Review>>; usage: Usage } {
 	const config = loadAgent(REVIEWER_AGENT_DIR);
-	let costUsd = 0;
+	const usage = emptyUsage();
 	const basePrompt = `Spec:\n${JSON.stringify(spec, null, 2)}\n\nPlan (already grounding-checked):\n${JSON.stringify(
 		plan,
 		null,
@@ -255,7 +366,7 @@ function callReviewer(
 		maxAttempts: MAX_ATTEMPTS,
 		callAgent: (prompt) => {
 			const r = callAgent(config, prompt, execClaude);
-			if (r.ok) costUsd += r.costUsd;
+			if (r.ok) addUsage(usage, r);
 			return r;
 		},
 		buildPrompt: (lastError) =>
@@ -272,7 +383,7 @@ function callReviewer(
 		gate: () => ({ ok: true })
 	});
 
-	return { result, costUsd };
+	return { result, usage };
 }
 
 type PlanStageResult =
@@ -282,27 +393,28 @@ type PlanStageResult =
 function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult {
 	const start = Date.now();
 	const runId = basename(runDir);
-	let totalCost = 0;
+	const usage = emptyUsage();
 	let totalAttempts = 0;
-	let reflectionFired = false;
+	const lessons: LessonRecord[] = [];
 	const groundingLog: string[] = [];
 	const reviewRounds: ReviewRoundTrace[] = [];
 	let lastReviewComments: string[] = [];
 
 	const specPrompt = `Spec:\n${JSON.stringify(spec, null, 2)}`;
 	const initial = generateGroundedPlan(specPrompt, runDir, 'plan', groundingLog);
-	totalCost += initial.costUsd;
+	mergeUsage(usage, initial.usage);
 	totalAttempts += initial.attemptCount;
-	reflectionFired =
-		runReflectionIfNeeded({
-			agentName: 'plan-agent',
-			agentDir: PLAN_AGENT_DIR,
-			task,
-			runId,
-			attempts: initial.attemptCount,
-			lastError: initial.result.ok ? undefined : initial.result.lastError,
-			lastOutput: initial.result.ok ? initial.result.output : initial.result.lastOutput
-		}) || reflectionFired;
+	const initialLesson = runReflectionIfNeeded({
+		agentName: 'plan-agent',
+		agentDir: PLAN_AGENT_DIR,
+		allowedTags: PLAN_AGENT_TAGS,
+		task,
+		runId,
+		attempts: initial.attemptCount,
+		lastError: initial.result.ok ? undefined : initial.result.lastError,
+		lastOutput: initial.result.ok ? initial.result.output : initial.result.lastOutput
+	});
+	if (initialLesson) lessons.push(initialLesson);
 
 	if (!initial.result.ok) {
 		writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
@@ -318,8 +430,8 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 				attempts: totalAttempts,
 				outcome: 'escalated',
 				durationMs: Date.now() - start,
-				costUsd: totalCost,
-				reflectionFired,
+				usage,
+				lessons,
 				review: []
 			}
 		};
@@ -330,13 +442,13 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 
 	for (let round = 1; round <= MAX_REVIEW_ROUNDS; round++) {
 		const isFinalRound = round === MAX_REVIEW_ROUNDS;
-		const { result: reviewResult, costUsd: reviewCost } = callReviewer(
+		const { result: reviewResult, usage: reviewUsage } = callReviewer(
 			spec,
 			currentPlan,
 			round,
 			isFinalRound
 		);
-		totalCost += reviewCost;
+		mergeUsage(usage, reviewUsage);
 		writeFileSync(
 			join(runDir, `review.round-${round}.json`),
 			JSON.stringify(
@@ -363,7 +475,8 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 
 		lastReviewComments = review.comments;
 		reviewRounds.push({ round, verdict: 'needs-revision', commentCount: review.comments.length });
-		reflectionFired = reflectFromReviewComments(runId, review.comments) || reflectionFired;
+		const commentLesson = reflectFromReviewComments(runId, review.comments);
+		if (commentLesson) lessons.push(commentLesson);
 
 		if (isFinalRound) break;
 
@@ -380,18 +493,19 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 			`plan.review-${round}`,
 			groundingLog
 		);
-		totalCost += revision.costUsd;
+		mergeUsage(usage, revision.usage);
 		totalAttempts += revision.attemptCount;
-		reflectionFired =
-			runReflectionIfNeeded({
-				agentName: 'plan-agent',
-				agentDir: PLAN_AGENT_DIR,
-				task,
-				runId,
-				attempts: revision.attemptCount,
-				lastError: revision.result.ok ? undefined : revision.result.lastError,
-				lastOutput: revision.result.ok ? revision.result.output : revision.result.lastOutput
-			}) || reflectionFired;
+		const revisionLesson = runReflectionIfNeeded({
+			agentName: 'plan-agent',
+			agentDir: PLAN_AGENT_DIR,
+			allowedTags: PLAN_AGENT_TAGS,
+			task,
+			runId,
+			attempts: revision.attemptCount,
+			lastError: revision.result.ok ? undefined : revision.result.lastError,
+			lastOutput: revision.result.ok ? revision.result.output : revision.result.lastOutput
+		});
+		if (revisionLesson) lessons.push(revisionLesson);
 
 		if (!revision.result.ok) {
 			writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
@@ -407,8 +521,8 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 					attempts: totalAttempts,
 					outcome: 'escalated',
 					durationMs: Date.now() - start,
-					costUsd: totalCost,
-					reflectionFired,
+					usage,
+					lessons,
 					review: reviewRounds
 				}
 			};
@@ -420,7 +534,8 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 	writeFileSync(join(runDir, 'grounding-check.log'), groundingLog.join('\n') + '\n');
 
 	if (reviewRounds.length > 1) {
-		reflectionFired = reflectReviewerCalibration(runId, reviewRounds) || reflectionFired;
+		const calibrationLesson = reflectReviewerCalibration(runId, reviewRounds);
+		if (calibrationLesson) lessons.push(calibrationLesson);
 	}
 
 	writeFileSync(join(runDir, 'plan.json'), JSON.stringify(currentPlan, null, 2));
@@ -442,8 +557,8 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 			attempts: totalAttempts,
 			outcome: approved ? 'ok' : 'unapproved',
 			durationMs: Date.now() - start,
-			costUsd: totalCost,
-			reflectionFired,
+			usage,
+			lessons,
 			review: reviewRounds
 		}
 	};
@@ -452,10 +567,13 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 function runPipeline(task: string, runDir: string): void {
 	const specResult = runSpecStage(task, runDir);
 	if (!specResult.ok) {
-		writeRunTrace(runDir, {
+		const stages = [specResult.trace];
+		writeReport(runDir, {
 			runId: basename(runDir),
 			task,
-			stages: [specResult.trace],
+			stages,
+			totals: computeTotals(stages),
+			outcome: computeOutcome(stages),
 			injected: false
 		});
 		console.error('spec stage: ESCALATED — see runs/%s/escalation.md', basename(runDir));
@@ -464,13 +582,15 @@ function runPipeline(task: string, runDir: string): void {
 	}
 
 	const planResult = runPlanStage(task, specResult.spec, runDir);
-	const trace: RunTrace = {
+	const stages = [specResult.trace, planResult.trace];
+	writeReport(runDir, {
 		runId: basename(runDir),
 		task,
-		stages: [specResult.trace, planResult.trace],
+		stages,
+		totals: computeTotals(stages),
+		outcome: computeOutcome(stages),
 		injected: false
-	};
-	writeRunTrace(runDir, trace);
+	});
 
 	if (!planResult.ok) {
 		console.error('plan stage: ESCALATED — see runs/%s/escalation.md', basename(runDir));
@@ -520,23 +640,26 @@ function runInjected(fixturePath: string, runDir: string): void {
 
 	const runId = basename(runDir);
 	const task = `(injected fixture demo: ${basename(fixturePath)})`;
-	const reflectionFired = runReflectionIfNeeded({
+	const lessons: LessonRecord[] = [];
+	const lesson = runReflectionIfNeeded({
 		agentName: 'plan-agent',
 		agentDir: PLAN_AGENT_DIR,
+		allowedTags: PLAN_AGENT_TAGS,
 		task,
 		runId,
 		attempts: result.attempts,
 		lastError: result.ok ? undefined : result.lastError,
 		lastOutput: result.ok ? result.output : result.lastOutput
 	});
+	if (lesson) lessons.push(lesson);
 
 	const trace: StageTrace = {
 		name: 'plan',
 		attempts: result.attempts,
 		outcome: result.ok ? 'ok' : 'escalated',
 		durationMs: 0,
-		costUsd: 0,
-		reflectionFired
+		usage: emptyUsage(),
+		lessons
 	};
 
 	if (!result.ok) {
@@ -547,7 +670,15 @@ function runInjected(fixturePath: string, runDir: string): void {
 		});
 	}
 
-	writeRunTrace(runDir, { runId, task, stages: [trace], injected: true });
+	const stages = [trace];
+	writeReport(runDir, {
+		runId,
+		task,
+		stages,
+		totals: computeTotals(stages),
+		outcome: computeOutcome(stages),
+		injected: true
+	});
 
 	if (result.ok) {
 		console.log(

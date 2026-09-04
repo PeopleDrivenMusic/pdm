@@ -15,11 +15,22 @@ yarn agent:pipeline "<task description>"
 Writes `runs/<timestamp>/` containing `spec.json`, `plan.attempt-N.json` per
 attempt, `plan.review-N.attempt-M.json` for any reviewer-triggered revision,
 `review.round-N.json` per reviewer verdict, `grounding-check.log`,
-`summary.json`, the final **`plan.json` + `plan.md`** (human-readable — always
-written once the plan is grounded, whether or not the reviewer approved it),
+the final **`plan.json` + `plan.md`** (human-readable — always written once
+the plan is grounded, whether or not the reviewer approved it),
 `review-notes.md` (only if the reviewer never approved after 3 rounds — the
-plan still ships, this file just says what's still open), and `escalation.md`
-(only if grounding itself was never satisfied — the hard failure mode).
+plan still ships, this file just says what's still open), `escalation.md`
+(only if grounding itself was never satisfied — the hard failure mode), and
+**`summary.json` + `report.html`** — the observability pair, written on
+every run regardless of outcome:
+
+- `summary.json` — per stage: attempts, outcome, duration, token usage
+  (`{costUsd, inputTokens, outputTokens}`), and every lesson that fired
+  (`{agent, triggerTag, rule, promoted}`); plus pipeline-wide `totals` and a
+  single top-level `outcome` (`ok` | `unapproved` | `escalated` — the worst
+  outcome across all stages).
+- `report.html` — a static, self-contained rendering of the exact same
+  `summary.json` (`lib/renderReportHtml.ts`, pure function, no template
+  drifts from the data) — open it directly in a browser, no server needed.
 
 ## Demo the failure path without spending real API calls on the plan stage
 

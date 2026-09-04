@@ -26,10 +26,12 @@ describe('writeRunTrace', () => {
 					attempts: 1,
 					outcome: 'ok',
 					durationMs: 5694,
-					costUsd: 0.12,
-					reflectionFired: false
+					usage: { costUsd: 0.12, inputTokens: 2100, outputTokens: 340 },
+					lessons: []
 				}
 			],
+			totals: { costUsd: 0.12, inputTokens: 2100, outputTokens: 340, durationMs: 5694 },
+			outcome: 'ok',
 			injected: false
 		};
 		writeRunTrace(runDir, trace);
