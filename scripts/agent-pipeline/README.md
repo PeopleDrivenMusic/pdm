@@ -15,11 +15,14 @@ yarn agent:pipeline "<task description>"
 Writes `runs/<timestamp>/` containing `spec.json`, `plan.attempt-N.json` per
 attempt, `plan.review-N.attempt-M.json` for any reviewer-triggered revision,
 `review.round-N.json` per reviewer verdict, `grounding-check.log`,
-the final **`plan.json` + `plan.md`** (human-readable — always written once
-the plan is grounded, whether or not the reviewer approved it),
-`review-notes.md` (only if the reviewer never approved after 3 rounds — the
-plan still ships, this file just says what's still open), `escalation.md`
-(only if grounding itself was never satisfied — the hard failure mode), and
+the final **`plan.json` + `plan.md` + `plan.html`** (all three written once
+the plan is grounded, whether or not the reviewer approved it — `plan.html`
+is a pure-function render of the same JSON, grouped by file with a citation
+count and the full review journey per round; open it directly, no build
+step, no separate Artifact-building step needed), `review-notes.md` (only
+if the reviewer never approved after 3 rounds — the plan still ships, this
+file just says what's still open), `escalation.md` (only if grounding
+itself was never satisfied — the hard failure mode), and
 **`summary.json` + `report.html`** — the observability pair, written on
 every run regardless of outcome:
 
@@ -62,11 +65,16 @@ genuine lesson recorded this way.
   a real run showed `input_tokens` alone under-reports by orders of
   magnitude (2 vs. ~47k), since most of a turn's context is cached system
   prompt/tool defs, not fresh input.
-- `lib/renderPlanMarkdown.ts` — pure renderer, `plan.json` → `plan.md`
-  (numbered decisions, a file:line:reason table, the verify commands, and a
-  review-status section). `plan.json` stays the single source every
-  machine consumer reads (gate, reviewer, and eventually a coder/test-writer
-  stage) — `plan.md` is a view over it, never a second source of truth.
+- `lib/renderPlanMarkdown.ts` / `lib/renderPlanHtml.ts` — pure renderers,
+  `plan.json` → `plan.md` / `plan.html`. `plan.json` stays the single source
+  every machine consumer reads (gate, reviewer, and eventually a
+  coder/test-writer stage) — these are views over it, never a second source
+  of truth. `renderPlanHtml` groups `fileMap` by path with a citation count
+  (a bar per file, not a fabricated dependency graph — a generic renderer
+  has no semantic understanding of the specific feature, so it only shows
+  what's mechanically true of the data: which files this plan cites most)
+  and renders the full review journey — every round's real comments, not
+  just a pass/fail count.
 - `lib/learnings.ts` + `lib/reflect.ts` — the self-improvement loop: a lesson
   becomes a `Candidate`, and only gets promoted to `Active` (and folded into
   that agent's system prompt) once the same `triggerTag` recurs — a counter

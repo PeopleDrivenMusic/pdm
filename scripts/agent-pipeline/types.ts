@@ -17,7 +17,12 @@ export type GateResult = { ok: true } | { ok: false; reason: string; failedRefs:
 
 export type Review = { verdict: 'approved' } | { verdict: 'needs-revision'; comments: string[] };
 
-export type ReviewRoundTrace = { round: number; verdict: Review['verdict']; commentCount: number };
+export type ReviewRoundTrace = {
+	round: number;
+	verdict: Review['verdict'];
+	commentCount: number;
+	comments: string[];
+};
 
 export type LessonRecord = { agent: string; triggerTag: string; rule: string; promoted: boolean };
 

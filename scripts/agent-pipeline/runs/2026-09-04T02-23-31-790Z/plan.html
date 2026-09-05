@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Plan</title>
+		<style>
+			:root {
+				--paper: #f6f5f2;
+				--paper-raised: #ffffff;
+				--ink: #211f1c;
+				--ink-soft: #5c584f;
+				--line: #ddd8cd;
+				--accent: #3b4d8a;
+				--accent-soft: #e7eaf3;
+				--pass: #3a7d44;
+				--pass-soft: #e6f0e3;
+				--warn: #a56a1f;
+				--warn-soft: #f3ead8;
+				--muted: #8a8577;
+				--muted-soft: #ece9e2;
+				--code-bg: #171a1f;
+				--code-ink: #dbe0e6;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				background: var(--paper);
+				color: var(--ink);
+				font:
+					15px/1.6 system-ui,
+					-apple-system,
+					sans-serif;
+				margin: 0;
+				padding: 32px 24px 72px;
+			}
+			code {
+				font-family: ui-monospace, Consolas, monospace;
+				background: var(--accent-soft);
+				color: var(--accent);
+				padding: 0.05em 0.35em;
+				border-radius: 4px;
+				font-size: 0.88em;
+				word-break: break-word;
+			}
+			.wrap {
+				max-width: 860px;
+				margin: 0 auto;
+			}
+			h1 {
+				font-size: 22px;
+				margin: 0 0 4px;
+			}
+			h2 {
+				font-size: 17px;
+				margin: 34px 0 12px;
+			}
+			.problem {
+				color: var(--ink-soft);
+				font-size: 15px;
+				max-width: 70ch;
+				margin-top: 10px;
+			}
+			.pill {
+				display: inline-flex;
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 12px;
+				font-weight: 600;
+				padding: 3px 10px;
+				border-radius: 999px;
+			}
+			.pill.pass {
+				background: var(--pass-soft);
+				color: var(--pass);
+			}
+			.pill.warn {
+				background: var(--warn-soft);
+				color: var(--warn);
+			}
+			.pill.muted {
+				background: var(--muted-soft);
+				color: var(--muted);
+			}
+			.two-col {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 24px;
+				margin-top: 20px;
+			}
+			.two-col h3 {
+				font-size: 12px;
+				font-family: ui-monospace, Consolas, monospace;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				color: var(--ink-soft);
+				margin: 0 0 8px;
+			}
+			.two-col ul {
+				margin: 0;
+				padding-left: 18px;
+				font-size: 14px;
+			}
+			.two-col li {
+				margin-bottom: 5px;
+			}
+			ol.decisions {
+				list-style: none;
+				counter-reset: dec;
+				padding: 0;
+				margin: 0;
+			}
+			.decision {
+				position: relative;
+				background: var(--paper-raised);
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				padding: 14px 16px 14px 48px;
+				margin-bottom: 8px;
+				font-size: 14px;
+				box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+			}
+			.decision .num {
+				position: absolute;
+				left: 14px;
+				top: 14px;
+				font-family: ui-monospace, Consolas, monospace;
+				font-weight: 700;
+				color: var(--accent);
+			}
+			.file-row {
+				background: var(--paper-raised);
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				padding: 12px 16px;
+				margin-bottom: 8px;
+			}
+			.file-head {
+				display: flex;
+				justify-content: space-between;
+				align-items: baseline;
+				gap: 10px;
+			}
+			.count {
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 12px;
+				color: var(--ink-soft);
+				white-space: nowrap;
+			}
+			.bar-track {
+				height: 5px;
+				background: var(--muted-soft);
+				border-radius: 3px;
+				margin: 8px 0;
+				overflow: hidden;
+			}
+			.bar {
+				height: 100%;
+				background: var(--accent);
+				border-radius: 3px;
+			}
+			.file-refs {
+				margin: 6px 0 0;
+				padding-left: 18px;
+				font-size: 13px;
+				color: var(--ink-soft);
+			}
+			.line-no {
+				font-family: ui-monospace, Consolas, monospace;
+				color: var(--accent);
+			}
+			.panel {
+				background: var(--code-bg);
+				color: var(--code-ink);
+				border-radius: 10px;
+				padding: 14px 16px;
+				overflow-x: auto;
+			}
+			.panel pre {
+				margin: 0;
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 13px;
+				line-height: 1.7;
+			}
+			.journey {
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				overflow: hidden;
+				background: var(--paper-raised);
+			}
+			.round {
+				padding: 14px 16px;
+				border-bottom: 1px solid var(--line);
+			}
+			.round:last-child {
+				border-bottom: none;
+			}
+			.round-head {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				margin-bottom: 6px;
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 13px;
+			}
+			.round ul {
+				margin: 0;
+				padding-left: 18px;
+			}
+			.round li {
+				font-size: 13.5px;
+				color: var(--ink-soft);
+				margin-bottom: 5px;
+			}
+			.empty {
+				color: var(--ink-soft);
+				font-size: 13.5px;
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<h1>Plan <span class="pill pass">reviewer-approved</span></h1>
+			<p class="problem">
+				Artist page tabs are currently client-only state (activeTab) instead of URL-addressable
+				routes, making individual views non-shareable and requiring inefficient data management.
+				Navigation between tabs causes unnecessary refetches due to the monolithic load design.
+			</p>
+
+			<div class="two-col">
+				<div>
+					<h3>Requirements</h3>
+					<ul>
+						<li>
+							Create nested route structure: migrate from /artist/[slug]/ to /artist/[slug]/[view]/
+							where [view] is one of: feed, music, posts, photos, videos, shop
+						</li>
+						<li>
+							Split per-view data loading: refactor +page.server.ts to lazy-load only the data
+							needed for each view, triggered on first navigation to that view
+						</li>
+						<li>
+							Implement client-side view caching: cache loaded view data in a Svelte store so
+							navigating away and back to an already-loaded view does NOT refetch or invalidate
+						</li>
+						<li>
+							Implement URL-driven navigation: update +page.svelte to navigate via goto(url) on tab
+							clicks instead of mutating activeTab state, and derive activeTab from URL params
+						</li>
+						<li>
+							Prevent page reload on navigation: use SvelteKit's client-side goto() instead of
+							full-page navigations or invalidateAll()
+						</li>
+						<li>
+							Handle missing/invalid view param: default to 'feed' view if [view] param is missing
+							or invalid; preserve existing 404 behavior for invalid artist slug
+						</li>
+						<li>
+							Support direct URL access: users can navigate directly to /artist/[slug]/music or
+							/artist/[slug]/posts and see the correct view with its data loaded
+						</li>
+					</ul>
+				</div>
+				<div>
+					<h3>Out of scope</h3>
+					<ul>
+						<li>
+							Refactoring the Tabs component to handle generic URL routing (keep it view-agnostic)
+						</li>
+						<li>
+							Changing artist profile data or subscription logic (only reorganize data flow, not
+							business logic)
+						</li>
+						<li>
+							Implementing Shop view functionality (already stubbed as 'coming soon', no data
+							loading needed yet)
+						</li>
+						<li>Adding new views or tabs beyond the current six</li>
+						<li>SEO optimizations like canonical URLs or structured markup per view</li>
+					</ul>
+				</div>
+			</div>
+
+			<h2>Decisions</h2>
+			<ol class="decisions">
+				<li class="decision">
+					<span class="num">1</span>Move artist resolution and viewer/entitlement computation out of
+					<code>+page.server.ts</code> into a new
+					<code>src/routes/(app)/artist/[slug]/+layout.server.ts</code> (current
+					<code>+page.server.ts:8</code> 404 lookup and
+					<code>:13-14</code>/<code>:19-21</code>/<code>:32-37</code> isOwner/isSubscriber logic) so
+					it runs once per artist and is NOT re-run when only <code>[view]</code> changes. Write
+					<code>src/routes/(app)/artist/[slug]/layout.server.spec.ts</code> first, modeled on the
+					event-object-literal + <code>vi.mock</code> pattern in
+					<code>src/routes/api/artist/[id]/subscription/server.spec.ts:10-18</code> (mocking
+					<code>$lib/db/queries</code> and <code>$lib/server/entitlement</code>), covering: throws
+					404 when <code>ArtistService.getArtistBySlug</code> resolves null;
+					<code>viewer.isOwner</code>/<code>isSubscribed</code> true when
+					<code>locals.user.id === artist.userId</code>;
+					<code>EntitlementService.isSubscriberOf</code> is called and <code>canSubscribe</code> is
+					true for a logged-in non-owner non-subscriber. Run
+					<code>yarn test:unit -- --run src/routes/(app)/artist/[slug]/layout.server.spec.ts</code>
+					and confirm it fails (module doesn't exist) before writing the implementation.
+				</li>
+				<li class="decision">
+					<span class="num">2</span>Only after that spec is red, implement
+					<code>+layout.server.ts</code> moving the logic from <code>+page.server.ts:8-14</code> and
+					<code>:19-37</code> unchanged in behavior (return
+					<code>{ artist, viewer, isSubscriber }</code>, since per-view loads need the raw
+					<code>isSubscriber</code> boolean via <code>await parent()</code>), and confirm the test
+					goes green.
+				</li>
+				<li class="decision">
+					<span class="num">3</span>Write
+					<code>src/routes/(app)/artist/[slug]/page.server.spec.ts</code> first for the reduced root
+					load: call <code>load({ params: { slug: 'foo' } } as any)</code> and assert it throws an
+					object with <code>status: 307</code> and
+					<code>location: '/artist/foo/feed'</code> (SvelteKit's <code>redirect()</code> throws a
+					plain object with those two fields — no mocking needed, this is a pure unit test of the
+					load function). Run
+					<code>yarn test:unit -- --run src/routes/(app)/artist/[slug]/page.server.spec.ts</code>
+					and confirm it fails against the current DB-backed implementation (current body at
+					<code>+page.server.ts:7-67</code>) before rewriting it. This closes the gap where the root
+					entry point's redirect had no automated coverage.
+				</li>
+				<li class="decision">
+					<span class="num">4</span>Implement the reduced
+					<code>src/routes/(app)/artist/[slug]/+page.server.ts</code> as a one-line redirect load —
+					<code>export const load: PageServerLoad = ({ params }) =&gt; { throw redirect(307, \</code
+					>/artist/${params.slug}/feed\<code>); };</code> — replacing the entire current body
+					(<code>+page.server.ts:7-67</code>). This corrects an earlier draft of this decision that
+					had a stray closing brace (<code>.../feed}</code>), which the new
+					<code>page.server.spec.ts</code> now catches: the spec's exact-string assertion on
+					<code>location</code> fails immediately if that typo is reintroduced. Confirm the spec
+					goes green.
+				</li>
+				<li class="decision">
+					<span class="num">5</span>Write
+					<code>src/routes/(app)/artist/[slug]/[view]/actions.server.spec.ts</code> first for the
+					<code>votePoll</code> action, reusing the <code>evt()</code>-style event-object-literal +
+					<code>vi.mock</code> pattern from
+					<code>src/routes/api/artist/[id]/subscription/server.spec.ts:10-18</code> (mocking
+					<code>$lib/db/services/ContentService</code>'s <code>PostPollService</code>). Cover,
+					unchanged from the current behavior at <code>+page.server.ts:75-99</code>: 401 when
+					<code>locals.user</code> is missing; 400 when <code>pollId</code> or
+					<code>optionId</code> form fields are missing/blank; success path calls
+					<code>PostPollService.vote({ pollId, optionId, userId })</code> and returns
+					<code>{ success: true }</code>; failure path (<code>result.ok === false</code>) returns
+					<code>fail(400, { error: result.reason })</code>. Run
+					<code
+						>yarn test:unit -- --run
+						src/routes/(app)/artist/[slug]/[view]/actions.server.spec.ts</code
+					>
+					and confirm it fails (module doesn't exist yet) before creating the file. This directly
+					addresses the gap where the prior plan flagged votePoll as needing to move but never
+					scheduled the move or its test.
+				</li>
+				<li class="decision">
+					<span class="num">6</span>Implement
+					<code>src/routes/(app)/artist/[slug]/[view]/+page.server.ts</code> exporting only
+					<code>actions = { votePoll: ... }</code>, moving the body of
+					<code>+page.server.ts:69-99</code> (the <code>getString</code> helper plus the
+					<code>votePoll</code> action) verbatim — no behavior change, only relocation. Deliberately
+					no <code>load</code> export here: view data comes from the new universal
+					<code>[view]/+page.ts</code> (cache-aware) instead, so adding a server load to this route
+					would force a server round-trip on every tab click and defeat the client-side view cache.
+					Because SvelteKit resolves a form's default action against the current page's own route,
+					and every <code>[view]</code> path now serves this same actions file, poll voting keeps
+					working from any tab (feed, posts, etc.) without the <code>+page.svelte</code> form markup
+					needing to change. Confirm the new actions spec goes green.
+				</li>
+				<li class="decision">
+					<span class="num">7</span>Write
+					<code>src/routes/(app)/artist/[slug]/view.spec.ts</code> first for a new pure helper
+					<code>resolveView(view: string | undefined): ViewId</code> (in a new
+					<code>src/routes/(app)/artist/[slug]/view.ts</code> exporting <code>ARTIST_VIEWS</code>,
+					the 6 ids) covering: known ids pass through unchanged; <code>undefined</code> and an
+					unknown string both resolve to <code>'feed'</code>. Run
+					<code>yarn test:unit -- --run src/routes/(app)/artist/[slug]/view.spec.ts</code> and
+					confirm red before writing <code>view.ts</code>. Reused by both
+					<code>[view]/+page.ts</code> (redirect invalid segments to feed) and
+					<code>+page.svelte</code> (derive <code>activeTab</code> from the URL).
+				</li>
+				<li class="decision">
+					<span class="num">8</span>Write
+					<code>src/lib/stores/artist-view-cache.spec.ts</code> first for a new plain module
+					<code>src/lib/stores/artist-view-cache.ts</code> exporting
+					<code>get(key: string)</code>/<code>set(key: string, value: unknown)</code> backed by a
+					module-level <code>Map</code>. Not a <code>.svelte.ts</code> rune store like
+					<code>src/lib/stores/chat.svelte.ts:22-58</code> — nothing in the template reads it
+					reactively, it's only consulted synchronously inside a <code>load</code> function — so
+					keep it a plain, framework-agnostic module that runs in the <code>server</code> vitest
+					project (<code>vite.config.ts:120-121</code> glob is
+					<code>src/**/*.{test,spec}.{js,ts}</code> excluding <code>*.svelte.{test,spec}</code>, no
+					browser instance needed). Cases: <code>set</code> then <code>get</code> with the same key
+					returns the exact stored value; <code>get</code> on a missing key returns
+					<code>undefined</code>; a second <code>set</code> on the same key overwrites the first.
+					Run and confirm red before implementing.
+				</li>
+				<li class="decision">
+					<span class="num">9</span>Write
+					<code>src/routes/api/artist/[slug]/[view]/server.spec.ts</code> first, modeled on
+					<code>src/routes/api/artist/[id]/subscription/server.spec.ts:1-38</code>'s event-object +
+					<code>vi.mock</code> style (and <code>+server.ts:6-24</code>'s plain-handler shape, though
+					this new endpoint is a public GET with no auth/CSRF guard). Cases: GET with
+					<code>view=music</code> calls
+					<code>TrackService.getTracksByArtist</code> (<code>src/lib/db/queries.ts:377</code>) and
+					<code>AlbumService.getAlbumsByArtist</code> (<code>src/lib/db/queries.ts:919</code>) but
+					NOT <code>ArtistPublicContentService.getArtistContent</code>; GET with
+					<code>view=photos</code>/<code>videos</code>/<code>feed</code>/<code>posts</code> calls
+					<code>getArtistContent</code> (<code>src/lib/db/services/ContentService.ts:1114</code>)
+					and, for feed/posts, also the track/album services; GET with <code>view=shop</code> or an
+					unrecognized view calls neither and returns 200 with an empty payload; GET 404s when
+					<code>ArtistService.getArtistBySlug</code> resolves null (this endpoint re-resolves the
+					artist itself since it's fetched independently of the SvelteKit load chain, unlike the
+					page loads which get it from the layout). Run and confirm red.
+				</li>
+				<li class="decision">
+					<span class="num">10</span>Implement the endpoint reusing
+					<code>ArtistPublicContentService.getArtistContent</code>,
+					<code>TrackService.getTracksByArtist</code>, <code>AlbumService.getAlbumsByArtist</code>,
+					and
+					<code>EntitlementService.isSubscriberOf</code>
+					(<code>src/lib/server/entitlement/EntitlementService.ts:9</code>) completely unchanged —
+					only which calls fire per <code>params.view</code> changes (via
+					<code>resolveView</code>/<code>ARTIST_VIEWS</code> from <code>view.ts</code>).
+					<code>getArtistContent</code> itself stays monolithic (out of scope) but is simply not
+					invoked for <code>music</code>/<code>shop</code>.
+				</li>
+				<li class="decision">
+					<span class="num">11</span>Write
+					<code>src/routes/(app)/artist/[slug]/[view]/page.spec.ts</code> first for the new
+					<code>[view]/+page.ts</code> universal load (no existing <code>+page.ts</code> exists
+					anywhere under <code>src/routes</code> to model), mocking
+					<code>$lib/stores/artist-view-cache</code>, <code>$app/environment</code>'s
+					<code>browser</code>, and <code>event.fetch</code>. Cases: (a)
+					<code>browser: true</code> + cache miss → calls
+					<code>event.fetch('/api/artist/&lt;slug&gt;/&lt;view&gt;')</code>, awaits/parses the JSON,
+					stores the resolved value in the cache under `<code> </code>${slug}:${view}<code> </code
+					><code>, and returns it; (b) </code>browser: true<code>
+						+ cache hit → returns the cached value synchronously without calling </code
+					>event.fetch<code>
+						at all — the actual 'don't refetch an already-loaded view' behavior; (c) </code
+					>browser: false<code> (SSR) → always calls </code>event.fetch<code>
+						and never reads/writes the cache, even with a same-keyed entry present — a server-side
+						module-level </code
+					>Map<code>
+						is shared mutable state across every concurrent user's request in the same Node process,
+						so consulting it during SSR would leak one visitor's content into another's response;
+						this case must be shown to fail if the </code
+					>browser<code> check is removed; (d) an invalid </code>params.view<code> triggers </code
+					>redirect(307, '/artist/&lt;slug&gt;/feed')<code> via </code>resolveView`, checked before
+					any fetch/cache logic. Run and confirm red.
+				</li>
+				<li class="decision">
+					<span class="num">12</span>Implement <code>[view]/+page.ts</code> per the above. Returning
+					the awaited resolved value (rather than the un-awaited promise the current
+					<code>+page.server.ts:62-65</code> streams) is a disclosed tradeoff: SvelteKit's
+					promise-streaming only applies to server load nodes, never a universal
+					(<code>+page.ts</code>) load's returned promises — confirmed in Svelte's own
+					<code>{#await}</code> runtime (<code
+						>node_modules/svelte/src/internal/client/dom/blocks/await.js:70-124</code
+					>
+					for the promise path vs. <code>:139-142</code> for the non-promise path, where a
+					non-thenable value is set and rendered via <code>:then</code> immediately with no
+					microtask delay, both SSR and CSR). So an already-resolved value renders real content
+					immediately on the SSR pass — satisfying direct-URL-access with data loaded — in exchange
+					for losing today's server-streamed-skeleton-then-fill behavior.
+				</li>
+				<li class="decision">
+					<span class="num">13</span>Flag as an accepted, standard cost: per
+					<code>node_modules/@sveltejs/kit/src/runtime/client/client.js:3029-3050</code>,
+					<code>load_node</code> runs for every route node including universal ones during
+					<code>_hydrate</code>, so a universal <code>+page.ts</code> load re-runs once more in the
+					browser right after the SSR'd page finishes hydrating — the first view shown on a fresh
+					full page load incurs one extra <code>event.fetch</code> post-hydration (cache is empty in
+					a fresh JS context). Subsequent tab clicks within that session are genuinely free of
+					refetch via the cache — this only affects the very first view per full page load, not tab
+					switching, so it doesn't undermine the no-refetch requirement.
+				</li>
+				<li class="decision">
+					<span class="num">14</span>Move <code>+page.svelte</code> to
+					<code>src/routes/(app)/artist/[slug]/[view]/+page.svelte</code>. Switch data access from
+					<code
+						>const { artist, viewer, tracks, albums, content } = $derived(page.data as
+						PageData)</code
+					>
+					(current <code>+page.svelte:15</code>, reading <code>$app/state</code>) to the standard
+					props pattern already used at <code>src/routes/(app)/+page.svelte:5</code> (<code
+						>let { data }: { data: PageData } = $props();</code
+					>). Keep <code>Tabs</code> (<code>src/lib/ui/Tabs.svelte</code>) unchanged — its internal
+					<code>click()</code> at <code>Tabs.svelte:67-70</code> reassigns the bound
+					<code>activeTab</code> directly, so bind a local <code>activeTab = $state(...)</code> (not
+					a <code>$derived</code>, not a valid two-way bind target). Replace the bare
+					<code>bind:activeTab</code> at <code>+page.svelte:85</code> with
+					<code>bind:activeTab onTabChange</code>, where <code>onTabChange</code> calls
+					<code>goto(</code>/artist/${artist.slug}/${tab.id}<code
+						>, { noScroll: true, keepFocus: true })</code
+					>
+					— every click is a real <code>goto()</code> (shallow-routing via
+					<code>pushState</code> was rejected:
+					<code>node_modules/@sveltejs/kit/src/runtime/client/client.js:2504-2542</code> shows
+					<code>pushState</code> only updates <code>page.state</code>/the browser history URL, not
+					SvelteKit's reactive <code>page.url</code>/<code>page.params</code>, so it can't drive
+					<code>activeTab</code> derivation, and the <code>+page.ts</code> cache already makes a
+					same-view <code>goto()</code> a zero-network no-op). Add an <code>$effect</code> that
+					resyncs local <code>activeTab</code> from
+					<code>resolveView(page.params.view)</code> (using <code>page</code> from
+					<code>$app/state</code>) whenever it changes, replacing the plain
+					<code>let activeTab = $state(tabs[0])</code> at <code>+page.svelte:31</code> — covers
+					back/forward and direct links.
+				</li>
+				<li class="decision">
+					<span class="num">15</span>Do not call <code>invalidateAll()</code> anywhere in the new
+					navigation path — <code>src/lib/client/subscription.ts:16</code> is the existing (and here
+					inapplicable) pattern for the separate subscribe/unsubscribe flow; it must not be copied
+					for tab navigation.
+				</li>
+				<li class="decision">
+					<span class="num">16</span>Write
+					<code>src/routes/(app)/artist/[slug]/[view]/page.svelte.spec.ts</code> first, modeled on
+					<code>src/routes/page.svelte.spec.ts:1-13</code> (<code>vitest-browser-svelte</code>'s
+					<code>render()</code> + <code>@vitest/browser/context</code>'s
+					<code>page.getByRole</code>). Mock <code>$app/navigation</code> (<code
+						>vi.mock('$app/navigation', () =&gt; ({ goto: vi.fn() }))</code
+					>, the same technique as
+					<code>src/lib/studio/music/uploadController.svelte.spec.ts:11</code>) and
+					<code>$app/state</code> (a <code>page</code> object exposing <code>.params.view</code>).
+					Cases: rendering with <code>page.params.view = 'music'</code> derives
+					<code>activeTab</code> as the Music tab (asserted via the active tab button's class/aria
+					state); clicking the Feed tab button calls the mocked <code>goto</code> with
+					<code>/artist/&lt;slug&gt;/feed</code> and never calls <code>invalidateAll</code>. Run
+					<code
+						>yarn test:unit -- --run src/routes/(app)/artist/[slug]/[view]/page.svelte.spec.ts</code
+					>
+					and confirm it fails before the <code>+page.svelte</code> move/rewrite, then confirm green
+					after.
+				</li>
+				<li class="decision">
+					<span class="num">17</span>Retype the shared view components' props:
+					<code>ArtistFeed.svelte:2,10,13</code> (and <code>ArtistPosts</code>,
+					<code>ArtistPhotos</code>, <code>ArtistVideos</code>, <code>ArtistTracks</code>,
+					<code>ArtistAlbums</code>) currently import prop types via <code>PageData</code> from
+					<code>'../$types'</code>, generated from the old <code>[slug]</code>-level
+					<code>+page.server.ts</code>. Since that route no longer produces
+					<code>tracks</code>/<code>albums</code>/<code>content</code>, repoint these prop types to
+					the named service types directly —
+					<code>PublicArtistContent</code> (<code>src/lib/db/services/ContentService.ts:144</code>)
+					for <code>content</code>, and the inferred return types of
+					<code>TrackService.getTracksByArtist</code>/<code>AlbumService.getAlbumsByArtist</code>
+					for <code>tracks</code>/<code>albums</code>. No functional change:
+					<code>content</code>/<code>tracks</code>/<code>albums</code> remain either a pending
+					promise or an already-resolved value, and
+					<code>{#await content}</code> (<code>ArtistFeed.svelte:13</code>) already handles both per
+					the verified Svelte runtime behavior above.
+				</li>
+				<li class="decision">
+					<span class="num">18</span>Manual verification (beyond the automated specs above, which
+					now cover the root redirect and votePoll move as well as the view/cache/navigation logic):
+					run <code>yarn dev</code>, click through all 6 tabs confirming the URL updates with no
+					full reload/flash and a revisited tab shows no network activity in devtools; hit
+					<code>/artist/&lt;slug&gt;/music</code> and
+					<code>/artist/&lt;slug&gt;/posts</code> directly to confirm real SSR content renders; hit
+					<code>/artist/&lt;slug&gt;/bogus</code> to confirm redirect to <code>feed</code>; submit a
+					poll vote from a non-feed tab to confirm the action still resolves against
+					<code>[view]/+page.server.ts</code>.
+				</li>
+			</ol>
+
+			<h2>Files touched</h2>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/(app)/artist/[slug]/+page.server.ts</code>
+					<span class="count">5 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 100%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:8</span> current artist-lookup + 404 check that moves into
+						+layout.server.ts so it runs once per artist, not per view
+					</li>
+					<li>
+						<span class="line-no">:19</span> current isSubscriberPromise/isOwner computation that
+						moves into +layout.server.ts unchanged; per-view loads read the resulting isSubscriber
+						via parent()
+					</li>
+					<li>
+						<span class="line-no">:62</span> current un-awaited streamed tracks/albums/content
+						promises — the pattern the new [view]/+page.ts intentionally does NOT replicate (it
+						awaits instead), since promise-streaming only works for server load nodes
+					</li>
+					<li>
+						<span class="line-no">:69</span> getString form-field helper used by votePoll, moved
+						verbatim together with the action into the new [view]/+page.server.ts
+					</li>
+					<li>
+						<span class="line-no">:75</span> votePoll action body (401/400/success paths via
+						PostPollService.vote) that must move unchanged to the new [view]/+page.server.ts, now
+						covered by a dedicated actions.server.spec.ts written before the move
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/(app)/artist/[slug]/+page.svelte</code>
+					<span class="count">3 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 60%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:15</span> current $derived(page.data) read from $app/state that
+						must switch to the standard $props() data pattern
+					</li>
+					<li>
+						<span class="line-no">:31</span> current local activeTab $state(tabs[0]) to replace with
+						a $state kept in sync with page.params.view via an $effect
+					</li>
+					<li>
+						<span class="line-no">:85</span> current bare bind:activeTab Tabs usage with no
+						onTabChange — needs an onTabChange handler that calls goto()
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/db/services/ContentService.ts</code>
+					<span class="count">2 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 40%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:144</span> PublicArtistContent type that shared view components
+						should type their content prop against directly, instead of a generated PageData tied to
+						one route
+					</li>
+					<li>
+						<span class="line-no">:1114</span> getArtistContent signature the new
+						/api/artist/[slug]/[view] endpoint reuses unchanged for the feed/posts/photos/videos
+						views
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/db/queries.ts</code>
+					<span class="count">2 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 40%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:377</span> getTracksByArtist reused unchanged by the new endpoint
+						for the music and feed views
+					</li>
+					<li>
+						<span class="line-no">:919</span> getAlbumsByArtist reused unchanged by the new endpoint
+						for the music view
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/page.svelte.spec.ts</code>
+					<span class="count">2 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 40%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:3</span> existing precedent for mounting a +page.svelte via
+						vitest-browser-svelte's render() in this repo, directly modeled for the new
+						[view]/+page.svelte.spec.ts
+					</li>
+					<li>
+						<span class="line-no">:8</span> shows the render(Page, { data }) call shape used to
+						inject PageData directly into a rendered +page.svelte under test
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/(app)/artist/[slug]/components/ArtistFeed.svelte</code>
+					<span class="count">2 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 40%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:2</span> shared content component currently types its prop via
+						PageData from '../$types', which breaks once the [slug]-level route stops producing
+						tracks/albums/content
+					</li>
+					<li>
+						<span class="line-no">:13</span> the {#await content} usage that must keep working
+						whether content is a pending promise or an already-resolved plain value from the new
+						cache-hit path
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>node_modules/@sveltejs/kit/src/runtime/client/client.js</code>
+					<span class="count">2 citations</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 40%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:3029</span> confirms universal (+page.ts) load nodes are invoked
+						again during _hydrate on the client, which is the source of the disclosed one-time extra
+						fetch after hydration for the first view of a fresh page load
+					</li>
+					<li>
+						<span class="line-no">:2528</span> confirms pushState only updates page.state and the
+						browser's history URL, not SvelteKit's reactive page.url/page.params — grounds the
+						decision to always use goto() rather than a pushState-based shallow-routing shortcut for
+						cached tabs
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/ui/Tabs.svelte</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:67</span> Tabs' internal click() reassigns the bound activeTab
+						directly, which is why the bind target in +page.svelte must stay a real $state (not a
+						$derived) synced from the URL, and why pushState (which doesn't update page.params) was
+						rejected in favor of always using goto()
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/client/subscription.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:16</span> existing invalidateAll() usage — the pattern the new
+						view navigation must explicitly avoid
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/server/entitlement/EntitlementService.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:9</span> isSubscriberOf reused by both +layout.server.ts and the
+						new per-view endpoint, since they run as separate requests and each needs the
+						locked-content flag independently
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/api/artist/[id]/subscription/+server.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:6</span> existing +server.ts structure (plain event handler) to
+						model the new endpoint's shape after
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/api/artist/[id]/subscription/server.spec.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:10</span> existing event-object-literal + vi.mock test pattern
+						reused for the new endpoint's, +layout.server.ts's, and the votePoll
+						actions.server.spec.ts's TDD tests
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/studio/music/uploadController.svelte.spec.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:11</span> existing vi.mock('$app/navigation', ...) pattern reused
+						for asserting goto (not invalidateAll) fires from the new component test
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/routes/(app)/+page.svelte</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:5</span> existing let { data }: { data: PageData } = $props()
+						pattern that the artist [view]/+page.svelte should adopt instead of reading $app/state's
+						page.data
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/stores/chat.svelte.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:22</span> existing class-based rune store pattern considered and
+						deliberately NOT used for the view cache, since the cache needs no template reactivity —
+						grounds the decision to keep it a plain Map module instead
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>vite.config.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:120</span> server vitest project glob
+						(src/**/*.{test,spec}.{js,ts} excluding *.svelte.{test,spec}) confirms the cache-store,
+						view.ts, endpoint, actions, and +page.ts spec files (plain .spec.ts) run in the
+						node/server project, not the browser one
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>node_modules/svelte/src/internal/client/dom/blocks/await.js</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:139</span> verified Svelte runtime behavior: a non-promise value
+						passed to {#await} is rendered via the :then branch immediately and synchronously, both
+						during SSR and CSR — this is what makes returning an awaited resolved value from the
+						universal load safe for the existing {#await content} template usage
+					</li>
+				</ul>
+			</div>
+			<div class="file-row">
+				<div class="file-head">
+					<code>src/lib/utils/logger.ts</code>
+					<span class="count">1 citation</span>
+				</div>
+				<div class="bar-track"><div class="bar" style="width: 20%"></div></div>
+				<ul class="file-refs">
+					<li>
+						<span class="line-no">:1</span> confirms $app/environment (used here for `dev`) is a
+						real, already-used import path in this repo, grounding the `browser` guard used in
+						[view]/+page.ts to prevent the module-level cache from being read/written during SSR
+						(shared mutable state across concurrent users' requests)
+					</li>
+				</ul>
+			</div>
+
+			<h2>Verify</h2>
+			<div class="panel">
+				<pre>
+$ yarn test:unit -- --run src/routes/(app)/artist/[slug]/layout.server.spec.ts
+$ yarn test:unit -- --run src/routes/(app)/artist/[slug]/page.server.spec.ts
+$ yarn test:unit -- --run src/routes/(app)/artist/[slug]/[view]/actions.server.spec.ts
+$ yarn test:unit -- --run src/routes/(app)/artist/[slug]/view.spec.ts
+$ yarn test:unit -- --run src/lib/stores/artist-view-cache.spec.ts
+$ yarn test:unit -- --run src/routes/api/artist/[slug]/[view]/server.spec.ts
+$ yarn test:unit -- --run src/routes/(app)/artist/[slug]/[view]/page.spec.ts
+$ yarn test:unit -- --run src/routes/(app)/artist/[slug]/[view]/page.svelte.spec.ts
+$ yarn check
+$ yarn lint</pre
+				>
+			</div>
+
+			<h2>Review journey</h2>
+			<div class="journey">
+				<div class="round">
+					<div class="round-head"><b>Round 1</b><span class="pill warn">needs-revision</span></div>
+					<ul>
+						<li>
+							Rubric 5 (internal consistency): the decision to move data loading into
+							<code>[view]/+page.ts</code> (universal load) and return an un-awaited
+							<code>event.fetch(...)</code> promise claims this 'preserves the existing {#await
+							content} streaming/skeleton contract.' It doesn't. SvelteKit's promise-streaming (the
+							chunked <code>text/sveltekit-data</code> flush) is implemented only for **server**
+							load nodes — confirmed in
+							<code>node_modules/@sveltejs/kit/src/runtime/server/data/index.js</code>, where only
+							<code>load_server_data</code> output goes through
+							<code>server_data_serializer_json</code>/<code>chunks</code>. A universal load's
+							promise gets no such treatment: during SSR, Svelte's <code>{#await}</code> simply
+							renders the pending branch synchronously, and the universal load then re-runs a second
+							time in the browser after hydration (this is normal SvelteKit behavior for
+							<code>+page.js</code>), firing a second <code>event.fetch</code>. So for requirement 7
+							(direct URL access), the SSR response will always render only the skeleton — real
+							content shows up only after a second client-side round trip — a genuine regression
+							from today's true SSR-streamed content that the plan neither flags as a tradeoff nor
+							accounts for elsewhere.
+						</li>
+						<li>
+							Rubric 4 (verifyCommands gap): the plan justifies skipping automated coverage of the
+							goto-on-click / URL-derived-activeTab wiring (spec requirements 4 and 5, arguably the
+							riskiest new logic) by asserting 'no unit-test infrastructure in this repo currently
+							mounts a +page.svelte... confirmed: no +page.svelte.spec.ts exists anywhere in
+							src/routes.' That's factually wrong —
+							<code>src/routes/page.svelte.spec.ts</code> already does exactly this, rendering
+							<code>./(app)/+page.svelte</code> via <code>vitest-browser-svelte</code>'s
+							<code>render()</code>. Combined with the
+							<code>vi.mock('$app/navigation', ...)</code> technique the plan itself references for
+							the cache-store test, a real automated test asserting <code>goto</code> (not
+							<code>invalidateAll</code>) fires with the correct URL on tab click is achievable and
+							should be added to <code>verifyCommands</code> instead of relying solely on manual
+							click-through.
+						</li>
+					</ul>
+				</div>
+				<div class="round">
+					<div class="round-head"><b>Round 2</b><span class="pill warn">needs-revision</span></div>
+					<ul>
+						<li>
+							Requirement 'Split per-view data loading: refactor +page.server.ts' has no decision
+							handling the existing <code>votePoll</code> action
+							(src/routes/(app)/artist/[slug]/+page.server.ts:74-100). Decision #3 reduces this file
+							to a one-line redirect load, and no other decision creates actions on the new
+							<code>[view]/+page.server.ts</code> — the fileMap entry for line 74 flags that
+							votePoll 'must move' there, but no decision item actually performs that move, and no
+							spec/verifyCommand covers it. As written, poll voting on the artist page silently
+							breaks after the migration (the form action posts to the <code>[view]</code> route,
+							which would have no matching action).
+						</li>
+						<li>
+							Decision #3's redirect snippet is broken:
+							<code>redirect(307, \</code>/artist/${params.slug}/feed}\<code>)</code> has a stray
+							closing brace before the closing backtick, producing a literal
+							<code>.../feed}</code> URL. This is the entry point for every existing
+							<code>/artist/[slug]</code> link and for requirement 6 (default to 'feed' when view is
+							missing) — as written it doesn't satisfy that requirement, it redirects to a broken
+							URL.
+						</li>
+						<li>
+							No verifyCommand exercises the root <code>+page.server.ts</code> redirect at all —
+							it's deferred to a manual <code>yarn dev</code> click-through (decision #3 and the
+							final manual-verification step). Given that reliance on manual-only checking, the typo
+							above would not be caught by any of the listed verifyCommands; a one-line automated
+							spec (or including it in an existing spec) is needed for this load-bearing entry-point
+							behavior.
+						</li>
+					</ul>
+				</div>
+				<div class="round">
+					<div class="round-head"><b>Round 3</b><span class="pill pass">approved</span></div>
+					<p class="empty">No issues raised.</p>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

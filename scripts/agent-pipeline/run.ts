@@ -5,6 +5,7 @@ import { callAgent, execClaude } from './lib/callAgent.ts';
 import { groundingCheck } from './lib/groundingCheck.ts';
 import { loadAgent } from './lib/loadAgent.ts';
 import { reflect } from './lib/reflect.ts';
+import { renderPlanHtml } from './lib/renderPlanHtml.ts';
 import { renderPlanMarkdown } from './lib/renderPlanMarkdown.ts';
 import { renderReportHtml } from './lib/renderReportHtml.ts';
 import { runStage } from './lib/runStage.ts';
@@ -462,19 +463,29 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 			lastReviewComments = [
 				`plan-reviewer failed to return a valid verdict: ${reviewResult.lastError}`
 			];
-			reviewRounds.push({ round, verdict: 'needs-revision', commentCount: 1 });
+			reviewRounds.push({
+				round,
+				verdict: 'needs-revision',
+				commentCount: 1,
+				comments: lastReviewComments
+			});
 			break;
 		}
 
 		const review = reviewResult.output;
 		if (review.verdict === 'approved') {
-			reviewRounds.push({ round, verdict: 'approved', commentCount: 0 });
+			reviewRounds.push({ round, verdict: 'approved', commentCount: 0, comments: [] });
 			approved = true;
 			break;
 		}
 
 		lastReviewComments = review.comments;
-		reviewRounds.push({ round, verdict: 'needs-revision', commentCount: review.comments.length });
+		reviewRounds.push({
+			round,
+			verdict: 'needs-revision',
+			commentCount: review.comments.length,
+			comments: review.comments
+		});
 		const commentLesson = reflectFromReviewComments(runId, review.comments);
 		if (commentLesson) lessons.push(commentLesson);
 
@@ -542,6 +553,10 @@ function runPlanStage(task: string, spec: Spec, runDir: string): PlanStageResult
 	writeFileSync(
 		join(runDir, 'plan.md'),
 		renderPlanMarkdown(currentPlan, { approved, comments: approved ? [] : lastReviewComments })
+	);
+	writeFileSync(
+		join(runDir, 'plan.html'),
+		renderPlanHtml({ spec, plan: currentPlan, review: reviewRounds })
 	);
 
 	if (!approved) {

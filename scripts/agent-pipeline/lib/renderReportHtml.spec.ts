@@ -28,7 +28,14 @@ const trace: RunTrace = {
 					promoted: false
 				}
 			],
-			review: [{ round: 1, verdict: 'needs-revision', commentCount: 1 }]
+			review: [
+				{
+					round: 1,
+					verdict: 'needs-revision',
+					commentCount: 1,
+					comments: ['spec requirement 3 has no matching decision']
+				}
+			]
 		}
 	],
 	totals: { costUsd: 0.767, inputTokens: 50100, outputTokens: 2140, durationMs: 274141 },
