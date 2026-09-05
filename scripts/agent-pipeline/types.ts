@@ -28,10 +28,12 @@ export type LessonRecord = { agent: string; triggerTag: string; rule: string; pr
 
 export type Usage = { costUsd: number; inputTokens: number; outputTokens: number };
 
+export type Outcome = 'ok' | 'escalated' | 'unapproved' | 'skipped';
+
 export type StageTrace = {
 	name: string;
 	attempts: number;
-	outcome: 'ok' | 'escalated' | 'unapproved';
+	outcome: Outcome;
 	durationMs: number;
 	usage: Usage;
 	lessons: LessonRecord[];
@@ -43,8 +45,51 @@ export type RunTrace = {
 	task: string;
 	stages: StageTrace[];
 	totals: Usage & { durationMs: number };
-	outcome: 'ok' | 'escalated' | 'unapproved';
+	outcome: Outcome;
 	injected: boolean;
+};
+
+/**
+ * A unit of executable work carved out of a Plan's decisions. `tdd-pair` is
+ * a (write-test, implement) pair identified by the test decision naming a
+ * real *.spec.ts/*.test.ts path; anything that doesn't fit that shape
+ * (a note, a manual-verification step) is `manual` — never run through
+ * test-writer/coder, just surfaced for the human.
+ */
+export type Slice =
+	| {
+			kind: 'tdd-pair';
+			testDecisionIndex: number;
+			testDecision: string;
+			implDecisionIndex: number;
+			implDecision: string;
+			testFile: string;
+	  }
+	| { kind: 'manual'; decisionIndex: number; decision: string };
+
+export type SliceTrace = {
+	sliceIndex: number;
+	kind: Slice['kind'];
+	testFile?: string;
+	outcome: Outcome;
+	durationMs: number;
+	attempts: { testWriter: number; coder: number };
+	usage: Usage;
+	lessons: LessonRecord[];
+	review: ReviewRoundTrace[];
+	committed: boolean;
+};
+
+export type WriteResult = { status: 'done' } | { status: 'blocked'; reason: string };
+
+export type ExecuteTrace = {
+	runId: string;
+	planPath: string;
+	branch: string;
+	slices: SliceTrace[];
+	finalVerify?: { ok: boolean; failedCommands: string[] };
+	totals: Usage & { durationMs: number };
+	outcome: Outcome;
 };
 
 function isNonEmptyStringArray(value: unknown): value is string[] {
@@ -89,6 +134,14 @@ export function isPlan(value: unknown): value is Plan {
 		v.fileMap.every(isPlanFileRef) &&
 		isNonEmptyStringArray(v.verifyCommands)
 	);
+}
+
+export function isWriteResult(value: unknown): value is WriteResult {
+	if (typeof value !== 'object' || value === null) return false;
+	const v = value as Record<string, unknown>;
+	if (v.status === 'done') return true;
+	if (v.status === 'blocked') return isNonEmptyString(v.reason);
+	return false;
 }
 
 export function isReview(value: unknown): value is Review {

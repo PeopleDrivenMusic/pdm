@@ -1,0 +1,4 @@
+{
+	"model": "claude-sonnet-5",
+	"allowedTools": ["Read", "Grep", "Glob", "Write", "Edit"]
+}

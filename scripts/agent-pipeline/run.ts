@@ -4,12 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { callAgent, execClaude } from './lib/callAgent.ts';
 import { groundingCheck } from './lib/groundingCheck.ts';
 import { loadAgent } from './lib/loadAgent.ts';
+import { parseJsonLoose } from './lib/parseJsonLoose.ts';
 import { reflect } from './lib/reflect.ts';
 import { renderPlanHtml } from './lib/renderPlanHtml.ts';
 import { renderPlanMarkdown } from './lib/renderPlanMarkdown.ts';
 import { renderReportHtml } from './lib/renderReportHtml.ts';
 import { runStage } from './lib/runStage.ts';
 import { writeEscalation, writeReviewNotes, writeRunTrace } from './lib/trace.ts';
+import { addUsage, emptyUsage, mergeUsage } from './lib/usage.ts';
 import { isPlan, isReview, isSpec } from './types.ts';
 import type {
 	LessonRecord,
@@ -21,7 +23,6 @@ import type {
 	StageTrace,
 	Usage
 } from './types.ts';
-import type { CallAgentResult } from './lib/callAgent.ts';
 
 const PIPELINE_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(PIPELINE_DIR, '..', '..');
@@ -68,22 +69,6 @@ function timestamp(): string {
 	return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
-function emptyUsage(): Usage {
-	return { costUsd: 0, inputTokens: 0, outputTokens: 0 };
-}
-
-function addUsage(target: Usage, r: Extract<CallAgentResult, { ok: true }>): void {
-	target.costUsd += r.costUsd;
-	target.inputTokens += r.inputTokens;
-	target.outputTokens += r.outputTokens;
-}
-
-function mergeUsage(target: Usage, src: Usage): void {
-	target.costUsd += src.costUsd;
-	target.inputTokens += src.inputTokens;
-	target.outputTokens += src.outputTokens;
-}
-
 function computeOutcome(stages: StageTrace[]): RunTrace['outcome'] {
 	if (stages.some((s) => s.outcome === 'escalated')) return 'escalated';
 	if (stages.some((s) => s.outcome === 'unapproved')) return 'unapproved';
@@ -104,19 +89,6 @@ function computeTotals(stages: StageTrace[]): RunTrace['totals'] {
 function writeReport(runDir: string, trace: RunTrace): void {
 	writeRunTrace(runDir, trace);
 	writeFileSync(join(runDir, 'report.html'), renderReportHtml(trace));
-}
-
-function parseJsonLoose<T>(text: string): { ok: true; value: T } | { ok: false; reason: string } {
-	const cleaned = text
-		.trim()
-		.replace(/^```(?:json)?\n?/, '')
-		.replace(/```$/, '')
-		.trim();
-	try {
-		return { ok: true, value: JSON.parse(cleaned) as T };
-	} catch (err) {
-		return { ok: false, reason: `invalid JSON: ${(err as Error).message}` };
-	}
 }
 
 function buildReflectionPrompt(

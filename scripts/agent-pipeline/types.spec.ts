@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPlan, isPlanFileRef, isReview, isSpec } from './types.ts';
+import { isPlan, isPlanFileRef, isReview, isSpec, isWriteResult } from './types.ts';
 
 describe('isSpec', () => {
 	it('accepts a well-formed spec', () => {
@@ -127,5 +127,25 @@ describe('isReview', () => {
 	it('rejects non-object input', () => {
 		expect(isReview(null)).toBe(false);
 		expect(isReview('approved')).toBe(false);
+	});
+});
+
+describe('isWriteResult', () => {
+	it('accepts a done status', () => {
+		expect(isWriteResult({ status: 'done' })).toBe(true);
+	});
+
+	it('accepts a blocked status with a reason', () => {
+		expect(isWriteResult({ status: 'blocked', reason: 'the decision contradicts the spec' })).toBe(
+			true
+		);
+	});
+
+	it('rejects a blocked status with no reason', () => {
+		expect(isWriteResult({ status: 'blocked' })).toBe(false);
+	});
+
+	it('rejects an unknown status', () => {
+		expect(isWriteResult({ status: 'maybe' })).toBe(false);
 	});
 });

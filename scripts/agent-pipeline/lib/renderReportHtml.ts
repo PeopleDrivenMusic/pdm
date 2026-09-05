@@ -23,6 +23,7 @@ function fmtMs(ms: number): string {
 function outcomeClass(outcome: string): string {
 	if (outcome === 'ok') return 'ok';
 	if (outcome === 'unapproved') return 'warn';
+	if (outcome === 'skipped') return 'muted';
 	return 'fail';
 }
 
