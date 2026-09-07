@@ -26,9 +26,9 @@
 	// (not bundled by Vite), so it isn't under src/ — added explicitly here so
 	// `yarn check` actually type-checks it instead of silently skipping it.
 	"include": [
-		"ambient.d.ts",
-		"env.d.ts",
-		"non-ambient.d.ts",
+		".svelte-kit/ambient.d.ts",
+		".svelte-kit/env.d.ts",
+		".svelte-kit/non-ambient.d.ts",
 		".svelte-kit/types/**/$types.d.ts",
 		"vite.config.js",
 		"vite.config.ts",

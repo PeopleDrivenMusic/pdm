@@ -8,21 +8,21 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/layout.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 279482,
+			"durationMs": 381730,
 			"attempts": {
 				"testWriter": 1,
 				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.6134458,
-				"inputTokens": 763784,
-				"outputTokens": 17674
+				"costUsd": 1.1472736000000001,
+				"inputTokens": 1108570,
+				"outputTokens": 21654
 			},
 			"lessons": [
 				{
 					"agent": "coder",
 					"triggerTag": "wrong-fix",
-					"rule": "Before finishing, run yarn install (or check yarn.lock) to ensure lockfile-pinned dependency versions match package.json resolutions instead of leaving stale/mismatched installed packages.",
+					"rule": "Never modify or pin dependency/lockfile versions to satisfy a test fix; only change application source that the decision actually describes.",
 					"promoted": false
 				}
 			],
@@ -31,10 +31,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.6134458,
-		"inputTokens": 763784,
-		"outputTokens": 17674,
-		"durationMs": 279482
+		"costUsd": 1.1472736000000001,
+		"inputTokens": 1108570,
+		"outputTokens": 21654,
+		"durationMs": 381730
 	},
 	"outcome": "escalated"
 }

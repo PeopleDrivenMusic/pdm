@@ -225,7 +225,11 @@ function runCoder(params: {
 					failedRefs: []
 				};
 			}
-			const typecheck = params.exec('yarn', ['check'], params.repoRoot);
+			// 'run' is required: Yarn Classic 1.x treats "check" as a reserved
+			// built-in (its own lockfile-integrity checker), which silently
+			// shadows a same-named package.json script — `yarn check` never once
+			// ran svelte-check here, live-verified 2026-09-07.
+			const typecheck = params.exec('yarn', ['run', 'check'], params.repoRoot);
 			if (!typecheck.ok) {
 				return {
 					ok: false,
@@ -587,7 +591,11 @@ function main(): void {
 		const failedCommands: string[] = [];
 		for (const command of plan.verifyCommands) {
 			const [bin, ...args] = command.split(' ');
-			const result = runCommand(bin, args, REPO_ROOT);
+			// Force `yarn run <script>` over bare `yarn <script>`: Yarn Classic
+			// 1.x reserves some script names (e.g. "check") as built-in commands
+			// that silently shadow a same-named package.json script otherwise.
+			const finalArgs = bin === 'yarn' && args[0] !== 'run' ? ['run', ...args] : args;
+			const result = runCommand(bin, finalArgs, REPO_ROOT);
 			if (!result.ok) failedCommands.push(command);
 		}
 		finalVerify = { ok: failedCommands.length === 0, failedCommands };
