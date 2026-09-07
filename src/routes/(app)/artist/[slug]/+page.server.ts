@@ -1,40 +1,18 @@
-import { AlbumService, ArtistService, TrackService } from '$lib/db/queries';
+import { AlbumService, TrackService } from '$lib/db/queries';
 import { ArtistPublicContentService, PostPollService } from '$lib/db/services/ContentService';
-import { EntitlementService } from '$lib/server/entitlement';
-import { error, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-	const artist = await ArtistService.getArtistBySlug(params.slug);
-	if (!artist) {
-		throw error(404, 'Artist not found');
-	}
+export const load: PageServerLoad = async ({ locals, parent }) => {
+	const { artist, viewer, isSubscriber } = await parent();
 
 	const userId = locals.user?.id;
-	const isOwner = userId === artist.userId;
-
-	// Fire the entitlement lookup + the independent list queries immediately (no waterfall).
-	// The list queries don't need entitlement, so they run in parallel with it. Owner is
-	// always entitled.
-	const isSubscriberPromise = isOwner
-		? Promise.resolve(true)
-		: EntitlementService.isSubscriberOf(userId, artist.id);
 	const albumsPromise = AlbumService.getAlbumsByArtist(artist.id);
 	const tracksQueryPromise = TrackService.getTracksByArtist({
 		artistId: artist.id,
 		userId,
 		limit: 1000
 	});
-
-	// Await the essential above-the-fold flag (a single-row lookup). Fail closed if the lookup
-	// errors: treat the viewer as a non-subscriber (content stays locked) rather than throwing —
-	// which also prevents the already-firing list queries from dangling as unhandled rejections.
-	let isSubscriber: boolean;
-	try {
-		isSubscriber = await isSubscriberPromise;
-	} catch {
-		isSubscriber = false;
-	}
 
 	// Streamed: derive the per-track `locked` flag from the already-firing query + resolved flag.
 	const tracksPromise = tracksQueryPromise.then((tracks) =>
@@ -47,18 +25,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// Streamed: content aggregation (the heavy query) starts right after the flag resolves.
 	const contentPromise = ArtistPublicContentService.getArtistContent(artist.id, {
 		userId,
-		isOwner,
+		isOwner: viewer.isOwner,
 		isSubscriber
 	});
 
 	return {
 		artist,
-		viewer: {
-			isOwner,
-			isSubscribed: !isOwner && isSubscriber,
-			canSubscribe: Boolean(userId) && !isOwner && !isSubscriber,
-			isLoggedIn: Boolean(userId)
-		},
+		viewer,
 		// Streamed (un-awaited) — the template renders these with {#await} + skeletons.
 		tracks: tracksPromise,
 		albums: albumsPromise,
