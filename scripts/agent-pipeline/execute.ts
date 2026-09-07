@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { callAgent, execClaude } from './lib/callAgent.ts';
 import { classifySlices } from './lib/classifySlices.ts';
 import {
@@ -535,12 +535,24 @@ function computeExecuteTotals(slices: SliceTrace[]): ExecuteTrace['totals'] {
 	return totals;
 }
 
+/** Reads a slice's trace from a previous run of this same plan — used to resume after an interrupted run (e.g. a real OS crash) without redoing already-committed slices, which would fail test-writer's red-gate against an implementation that already exists. */
+export function loadPreviousSliceTrace(
+	summaryPath: string,
+	sliceIndex: number
+): SliceTrace | undefined {
+	if (!existsSync(summaryPath)) return undefined;
+	const previous: ExecuteTrace = JSON.parse(readFileSync(summaryPath, 'utf-8'));
+	return previous.slices[sliceIndex];
+}
+
 function main(): void {
 	const planPath = process.argv[2];
 	if (!planPath || !existsSync(planPath)) {
-		console.error('Usage: node execute.ts <path-to-plan.json>');
+		console.error('Usage: node execute.ts <path-to-plan.json> [--from-slice=N]');
 		process.exit(1);
 	}
+	const fromSliceArg = process.argv.find((a) => a.startsWith('--from-slice='));
+	const fromSlice = fromSliceArg ? Number(fromSliceArg.split('=')[1]) : 0;
 
 	const branch = currentBranch(REPO_ROOT);
 	if (branch === 'main') {
@@ -560,13 +572,47 @@ function main(): void {
 
 	const runDir = dirname(planPath);
 	const runId = basename(runDir);
+	const summaryPath = join(runDir, 'execute-summary.json');
 	const slices = classifySlices(plan.decisions);
 
 	const sliceTraces: SliceTrace[] = [];
 	let escalated = false;
 
+	// Persisted after every slice (not just at the end) so a real crash never
+	// loses more than the one slice in progress, and so --from-slice has real
+	// prior-run data to resume from.
+	const persist = (finalVerify?: ExecuteTrace['finalVerify']): ExecuteTrace => {
+		const executeTrace: ExecuteTrace = {
+			runId,
+			planPath,
+			branch,
+			slices: sliceTraces,
+			finalVerify,
+			totals: computeExecuteTotals(sliceTraces),
+			outcome:
+				escalated || finalVerify?.ok === false ? 'escalated' : computeExecuteOutcome(sliceTraces)
+		};
+		writeFileSync(summaryPath, JSON.stringify(executeTrace, null, 2));
+		writeFileSync(
+			join(runDir, 'execute-report.html'),
+			renderReportHtml(toRunTraceLike(executeTrace))
+		);
+		return executeTrace;
+	};
+
 	slices.forEach((slice, sliceIndex) => {
 		if (escalated) return;
+		if (sliceIndex < fromSlice) {
+			const carried = loadPreviousSliceTrace(summaryPath, sliceIndex);
+			if (!carried) {
+				console.error(
+					`--from-slice=${fromSlice} given but ${summaryPath} has no trace for slice ${sliceIndex}.`
+				);
+				process.exit(1);
+			}
+			sliceTraces.push(carried);
+			return;
+		}
 		if (slice.kind === 'manual') {
 			sliceTraces.push({
 				sliceIndex,
@@ -579,6 +625,7 @@ function main(): void {
 				review: [],
 				committed: false
 			});
+			persist();
 			return;
 		}
 
@@ -586,6 +633,7 @@ function main(): void {
 		const trace = runSlice({ repoRoot: REPO_ROOT, runId, sliceIndex, slice, exec: runCommand });
 		sliceTraces.push(trace);
 		if (trace.outcome === 'escalated') escalated = true;
+		persist();
 	});
 
 	let finalVerify: ExecuteTrace['finalVerify'];
@@ -603,22 +651,7 @@ function main(): void {
 		finalVerify = { ok: failedCommands.length === 0, failedCommands };
 	}
 
-	const executeTrace: ExecuteTrace = {
-		runId,
-		planPath,
-		branch,
-		slices: sliceTraces,
-		finalVerify,
-		totals: computeExecuteTotals(sliceTraces),
-		outcome:
-			escalated || finalVerify?.ok === false ? 'escalated' : computeExecuteOutcome(sliceTraces)
-	};
-
-	writeFileSync(join(runDir, 'execute-summary.json'), JSON.stringify(executeTrace, null, 2));
-	writeFileSync(
-		join(runDir, 'execute-report.html'),
-		renderReportHtml(toRunTraceLike(executeTrace))
-	);
+	persist(finalVerify);
 
 	if (escalated) {
 		console.error(
@@ -635,4 +668,12 @@ function main(): void {
 	console.log(`Execution complete — see runs/${runId}/execute-report.html`);
 }
 
-main();
+// pathToFileURL, not manual `file://${argv[1]}` concatenation — the prior
+// version of this guard used that string-built form and it never matched on
+// this machine (argv[1] wasn't URL-encoded/slash-normalized the same way
+// import.meta.url is), so main() silently never ran on the very first real
+// invocation. pathToFileURL handles both correctly and is the pattern Node's
+// own docs recommend for "is this module the entry point".
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	main();
+}

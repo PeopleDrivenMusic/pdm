@@ -7,11 +7,11 @@
 			"sliceIndex": 0,
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/layout.server.spec.ts",
-			"outcome": "escalated",
-			"durationMs": 46442,
+			"outcome": "ok",
+			"durationMs": 0,
 			"attempts": {
-				"testWriter": 3,
-				"coder": 0
+				"testWriter": 1,
+				"coder": 1
 			},
 			"usage": {
 				"costUsd": 0,
@@ -19,15 +19,15 @@
 				"outputTokens": 0
 			},
 			"lessons": [],
-			"review": [],
-			"committed": false
+			"review": [{ "round": 1, "verdict": "approved", "commentCount": 0, "comments": [] }],
+			"committed": true
 		}
 	],
 	"totals": {
 		"costUsd": 0,
 		"inputTokens": 0,
 		"outputTokens": 0,
-		"durationMs": 46442
+		"durationMs": 0
 	},
-	"outcome": "escalated"
+	"outcome": "ok"
 }
