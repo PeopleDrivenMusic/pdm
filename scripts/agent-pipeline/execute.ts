@@ -625,6 +625,4 @@ function main(): void {
 	console.log(`Execution complete — see runs/${runId}/execute-report.html`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-	main();
-}
+main();
