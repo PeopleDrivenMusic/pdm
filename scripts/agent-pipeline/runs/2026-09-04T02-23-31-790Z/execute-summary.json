@@ -34,21 +34,21 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/page.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 374039,
+			"durationMs": 428854,
 			"attempts": {
 				"testWriter": 1,
 				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.7146452,
-				"inputTokens": 1212259,
-				"outputTokens": 18597
+				"costUsd": 0.7762100999999999,
+				"inputTokens": 1334633,
+				"outputTokens": 22249
 			},
 			"lessons": [
 				{
 					"agent": "coder",
 					"triggerTag": "wrong-fix",
-					"rule": "Before finishing, run the project's lint/type-check command and fix any errors it reports in files you touched, rather than assuming the change is complete once the test passes.",
+					"rule": "Match assertion expectations exactly against the actual redirect target value the code produces, not an assumed one.",
 					"promoted": false
 				}
 			],
@@ -57,10 +57,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.7146452,
-		"inputTokens": 1212259,
-		"outputTokens": 18597,
-		"durationMs": 374039
+		"costUsd": 0.7762100999999999,
+		"inputTokens": 1334633,
+		"outputTokens": 22249,
+		"durationMs": 428854
 	},
 	"outcome": "escalated"
 }
