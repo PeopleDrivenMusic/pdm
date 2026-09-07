@@ -4,6 +4,10 @@ export type AgentConfig = {
 	model: string;
 	allowedTools: string[];
 	appendSystemPrompt: string;
+	/** 'plan' for read-only agents (spec/plan/reviewers) — blocks all writes.
+	 * 'acceptEdits' for agents that must actually write files (test-writer,
+	 * coder) — allows Write/Edit through without a per-call prompt. */
+	permissionMode: string;
 };
 
 export type CallAgentResult =
@@ -33,7 +37,16 @@ export function callAgent(config: AgentConfig, prompt: string, exec: ExecFn): Ca
 		'--allowedTools',
 		config.allowedTools.join(' '),
 		'--permission-mode',
-		'plan',
+		config.permissionMode,
+		// Live-verified (2026-09-07): --allowedTools alone does not remove
+		// Bash/PowerShell once permission-mode isn't "plan" — a real
+		// acceptEdits call ran a shell command with zero permission denials
+		// despite never listing Bash. --restricted is the flag that actually
+		// removes code-execution tools unless named explicitly; no agent in
+		// this pipeline should ever run a real command itself (the
+		// orchestrator does, so its output is grounded), so this is
+		// unconditional, not configurable.
+		'--restricted',
 		'--append-system-prompt',
 		config.appendSystemPrompt
 	];

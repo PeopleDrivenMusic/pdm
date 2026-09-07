@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Pipeline report — 2026-09-04T02-23-31-790Z</title>
+		<style>
+			:root {
+				--paper: #f5f6f2;
+				--ink: #1c2321;
+				--ink-soft: #565f5b;
+				--line: #daded7;
+				--accent: #2e6f6b;
+				--ok: #3a7d44;
+				--ok-soft: #e6f0e3;
+				--warn: #a56a1f;
+				--warn-soft: #f3ead8;
+				--fail: #b33a3a;
+				--fail-soft: #f5e6e4;
+				--muted: #8fa39b;
+				--muted-soft: #eceeea;
+				--card: #ffffff;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				background: var(--paper);
+				color: var(--ink);
+				font:
+					15px/1.5 system-ui,
+					-apple-system,
+					sans-serif;
+				margin: 0;
+				padding: 32px 24px 64px;
+			}
+			.mono,
+			td.mono,
+			th.mono,
+			code {
+				font-family: ui-monospace, Consolas, monospace;
+			}
+			.wrap {
+				max-width: 860px;
+				margin: 0 auto;
+			}
+			h1 {
+				font-size: 22px;
+				margin: 0 0 4px;
+			}
+			.task {
+				color: var(--ink-soft);
+				font-size: 15px;
+				margin: 0 0 20px;
+				max-width: 70ch;
+			}
+			.meta {
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 12.5px;
+				color: var(--ink-soft);
+				margin-bottom: 24px;
+			}
+			.badge {
+				display: inline-block;
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 12px;
+				font-weight: 600;
+				padding: 2px 8px;
+				border-radius: 999px;
+			}
+			.badge.ok {
+				background: var(--ok-soft);
+				color: var(--ok);
+			}
+			.badge.warn {
+				background: var(--warn-soft);
+				color: var(--warn);
+			}
+			.badge.fail {
+				background: var(--fail-soft);
+				color: var(--fail);
+			}
+			.badge.muted {
+				background: var(--muted-soft);
+				color: var(--muted);
+			}
+			.totals {
+				display: flex;
+				gap: 0;
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				overflow: hidden;
+				background: var(--card);
+				margin-bottom: 28px;
+			}
+			.totals .cell {
+				flex: 1;
+				padding: 14px 16px;
+				border-right: 1px solid var(--line);
+			}
+			.totals .cell:last-child {
+				border-right: none;
+			}
+			.totals .n {
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 19px;
+				font-weight: 600;
+				color: var(--accent);
+			}
+			.totals .l {
+				font-size: 11.5px;
+				color: var(--ink-soft);
+				margin-top: 2px;
+			}
+			h2 {
+				font-size: 16px;
+				margin: 32px 0 12px;
+			}
+			table {
+				border-collapse: collapse;
+				width: 100%;
+				background: var(--card);
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				overflow: hidden;
+			}
+			th,
+			td {
+				text-align: left;
+				padding: 9px 12px;
+				border-bottom: 1px solid var(--line);
+				font-size: 13.5px;
+			}
+			th {
+				font-family: ui-monospace, Consolas, monospace;
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				color: var(--ink-soft);
+				background: #eef1ef;
+			}
+			td.num,
+			th.num {
+				text-align: right;
+				font-family: ui-monospace, Consolas, monospace;
+				font-variant-numeric: tabular-nums;
+			}
+			tr.sub-row td {
+				border-bottom: 1px solid var(--line);
+				padding: 0 12px 8px;
+				font-size: 12px;
+				color: var(--ink-soft);
+			}
+			.review-line {
+				font-family: ui-monospace, Consolas, monospace;
+			}
+			.empty {
+				color: var(--ink-soft);
+				font-size: 13.5px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<h1>Pipeline report <span class="badge fail">escalated</span></h1>
+			<p class="task">execute: scripts/agent-pipeline/runs/2026-09-04T02-23-31-790Z/plan.json</p>
+			<div class="meta">2026-09-04T02-23-31-790Z</div>
+
+			<div class="totals">
+				<div class="cell">
+					<div class="n">$0.7346</div>
+					<div class="l">total cost</div>
+				</div>
+				<div class="cell">
+					<div class="n">1,052,397</div>
+					<div class="l">input tokens</div>
+				</div>
+				<div class="cell">
+					<div class="n">9,589</div>
+					<div class="l">output tokens</div>
+				</div>
+				<div class="cell">
+					<div class="n">169.6s</div>
+					<div class="l">wall time</div>
+				</div>
+			</div>
+
+			<h2>Stages</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Stage</th>
+						<th>Outcome</th>
+						<th class="num">Attempts</th>
+						<th class="num">Duration</th>
+						<th class="num">Tokens in</th>
+						<th class="num">Tokens out</th>
+						<th class="num">Cost</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="mono">slice 0: src/routes/(app)/artist/[slug]/layout.server.spec.ts</td>
+						<td><span class="badge fail">escalated</span></td>
+						<td class="num">3</td>
+						<td class="num">169.6s</td>
+						<td class="num">1,052,397</td>
+						<td class="num">9,589</td>
+						<td class="num">$0.7346</td>
+					</tr>
+					<tr class="sub-row">
+						<td colspan="7"><div class="review-line">review:</div></td>
+					</tr>
+				</tbody>
+			</table>
+
+			<h2>Lessons this run</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Agent</th>
+						<th>Trigger</th>
+						<th>Rule</th>
+						<th>Promoted</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="mono">test-writer</td>
+						<td class="mono">other</td>
+						<td>
+							Before writing any test file, check whether Plan mode is active in the session and
+							immediately report blocked instead of attempting the write.
+						</td>
+						<td><span class="badge muted">Candidate</span></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

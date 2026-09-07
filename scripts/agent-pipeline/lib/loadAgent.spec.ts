@@ -11,7 +11,11 @@ describe('loadAgent', () => {
 		agentDir = mkdtempSync(join(tmpdir(), 'agent-'));
 		writeFileSync(
 			join(agentDir, 'config.json'),
-			JSON.stringify({ model: 'claude-sonnet-5', allowedTools: ['Read', 'Grep', 'Glob'] })
+			JSON.stringify({
+				model: 'claude-sonnet-5',
+				allowedTools: ['Read', 'Grep', 'Glob'],
+				permissionMode: 'plan'
+			})
 		);
 		writeFileSync(join(agentDir, 'system-prompt.md'), 'You are the plan agent.');
 	});
@@ -29,6 +33,7 @@ describe('loadAgent', () => {
 		expect(config).toEqual({
 			model: 'claude-sonnet-5',
 			allowedTools: ['Read', 'Grep', 'Glob'],
+			permissionMode: 'plan',
 			appendSystemPrompt: 'You are the plan agent.'
 		});
 	});

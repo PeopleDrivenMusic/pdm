@@ -5,7 +5,8 @@ import type { AgentConfig } from './callAgent.ts';
 const config: AgentConfig = {
 	model: 'claude-sonnet-5',
 	allowedTools: ['Read', 'Grep', 'Glob'],
-	appendSystemPrompt: 'You are the spec agent.'
+	appendSystemPrompt: 'You are the spec agent.',
+	permissionMode: 'plan'
 };
 
 function fakeExec(stdout: string) {
@@ -77,7 +78,7 @@ describe('callAgent', () => {
 		if (!result.ok) expect(result.reason).toContain('JSON');
 	});
 
-	it('passes --model, --allowedTools, and --append-system-prompt through to the exec function', () => {
+	it('passes --model, --allowedTools, --permission-mode, and --append-system-prompt through to the exec function', () => {
 		const seenArgs: string[][] = [];
 		const exec = (args: string[]) => {
 			seenArgs.push(args);
@@ -94,5 +95,34 @@ describe('callAgent', () => {
 		expect(args).toContain('You are the spec agent.');
 		expect(args).toContain('--permission-mode');
 		expect(args).toContain('plan');
+	});
+
+	it('always passes --restricted, regardless of permission mode', () => {
+		// Live-verified (2026-09-07): --allowedTools alone does NOT block
+		// PowerShell/Bash once permission-mode is anything other than "plan" —
+		// a real acceptEdits call ran a shell command with zero permission
+		// denials despite Bash/PowerShell never being in --allowedTools.
+		// --restricted is what actually removes code-execution tools unless
+		// named explicitly, and none of this pipeline's agents should ever
+		// have one — the orchestrator runs every real command, never the agent.
+		const seenArgs: string[][] = [];
+		const exec = (args: string[]) => {
+			seenArgs.push(args);
+			return JSON.stringify({ is_error: false, result: 'OK', total_cost_usd: 0, usage: {} });
+		};
+		callAgent({ ...config, permissionMode: 'acceptEdits' }, 'the prompt', exec);
+		expect(seenArgs[0]).toContain('--restricted');
+	});
+
+	it('passes the configured permissionMode, not a hardcoded one', () => {
+		const seenArgs: string[][] = [];
+		const exec = (args: string[]) => {
+			seenArgs.push(args);
+			return JSON.stringify({ is_error: false, result: 'OK', total_cost_usd: 0, usage: {} });
+		};
+		callAgent({ ...config, permissionMode: 'acceptEdits' }, 'the prompt', exec);
+		const args = seenArgs[0];
+		const modeIndex = args.indexOf('--permission-mode');
+		expect(args[modeIndex + 1]).toBe('acceptEdits');
 	});
 });
