@@ -19,15 +19,48 @@
 				"outputTokens": 0
 			},
 			"lessons": [],
-			"review": [{ "round": 1, "verdict": "approved", "commentCount": 0, "comments": [] }],
+			"review": [
+				{
+					"round": 1,
+					"verdict": "approved",
+					"commentCount": 0,
+					"comments": []
+				}
+			],
 			"committed": true
+		},
+		{
+			"sliceIndex": 1,
+			"kind": "tdd-pair",
+			"testFile": "src/routes/(app)/artist/[slug]/page.server.spec.ts",
+			"outcome": "escalated",
+			"durationMs": 374039,
+			"attempts": {
+				"testWriter": 1,
+				"coder": 3
+			},
+			"usage": {
+				"costUsd": 0.7146452,
+				"inputTokens": 1212259,
+				"outputTokens": 18597
+			},
+			"lessons": [
+				{
+					"agent": "coder",
+					"triggerTag": "wrong-fix",
+					"rule": "Before finishing, run the project's lint/type-check command and fix any errors it reports in files you touched, rather than assuming the change is complete once the test passes.",
+					"promoted": false
+				}
+			],
+			"review": [],
+			"committed": false
 		}
 	],
 	"totals": {
-		"costUsd": 0,
-		"inputTokens": 0,
-		"outputTokens": 0,
-		"durationMs": 0
+		"costUsd": 0.7146452,
+		"inputTokens": 1212259,
+		"outputTokens": 18597,
+		"durationMs": 374039
 	},
-	"outcome": "ok"
+	"outcome": "escalated"
 }

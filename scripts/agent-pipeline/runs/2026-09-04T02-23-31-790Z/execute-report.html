@@ -161,25 +161,25 @@
 	</head>
 	<body>
 		<div class="wrap">
-			<h1>Pipeline report <span class="badge ok">ok</span></h1>
+			<h1>Pipeline report <span class="badge fail">escalated</span></h1>
 			<p class="task">execute: scripts/agent-pipeline/runs/2026-09-04T02-23-31-790Z/plan.json</p>
 			<div class="meta">2026-09-04T02-23-31-790Z</div>
 
 			<div class="totals">
 				<div class="cell">
-					<div class="n">$0</div>
+					<div class="n">$0.7146</div>
 					<div class="l">total cost</div>
 				</div>
 				<div class="cell">
-					<div class="n">0</div>
+					<div class="n">1,212,259</div>
 					<div class="l">input tokens</div>
 				</div>
 				<div class="cell">
-					<div class="n">0</div>
+					<div class="n">18,597</div>
 					<div class="l">output tokens</div>
 				</div>
 				<div class="cell">
-					<div class="n">0ms</div>
+					<div class="n">374.0s</div>
 					<div class="l">wall time</div>
 				</div>
 			</div>
@@ -210,14 +210,44 @@
 					<tr class="sub-row">
 						<td colspan="7"><div class="review-line">review: round 1 approved</div></td>
 					</tr>
+					<tr>
+						<td class="mono">slice 1: src/routes/(app)/artist/[slug]/page.server.spec.ts</td>
+						<td><span class="badge fail">escalated</span></td>
+						<td class="num">4</td>
+						<td class="num">374.0s</td>
+						<td class="num">1,212,259</td>
+						<td class="num">18,597</td>
+						<td class="num">$0.7146</td>
+					</tr>
+					<tr class="sub-row">
+						<td colspan="7"><div class="review-line">review:</div></td>
+					</tr>
 				</tbody>
 			</table>
 
 			<h2>Lessons this run</h2>
-			<p class="empty">
-				No lessons fired this run — every stage either succeeded on the first attempt or was
-				approved without a retry.
-			</p>
+			<table>
+				<thead>
+					<tr>
+						<th>Agent</th>
+						<th>Trigger</th>
+						<th>Rule</th>
+						<th>Promoted</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="mono">coder</td>
+						<td class="mono">wrong-fix</td>
+						<td>
+							Before finishing, run the project's lint/type-check command and fix any errors it
+							reports in files you touched, rather than assuming the change is complete once the
+							test passes.
+						</td>
+						<td><span class="badge muted">Candidate</span></td>
+					</tr>
+				</tbody>
+			</table>
 		</div>
 	</body>
 </html>

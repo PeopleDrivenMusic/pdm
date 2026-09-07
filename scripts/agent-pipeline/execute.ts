@@ -286,6 +286,11 @@ function runCodeReviewer(params: {
 	return { result, usage };
 }
 
+/** listDirtyFiles(), excluding this pipeline's own agents/*\/learnings.md files. A slice's reflectOnRetry can dirty an agent's learnings.md mid-slice (real bug, 2026-09-07: a real coder escalation wrote a genuine lesson, then the very next line reverted it to nothing, because the escalation revert re-queried listDirtyFiles and swept the pipeline's own state up with the coder's reverted code). Pipeline learnings must never be wiped by a code revert, swept into a feature commit, or shown to code-reviewer as part of the code diff. */
+export function codeDirtyFiles(repoRoot: string): string[] {
+	return listDirtyFiles(repoRoot).filter((f) => !/agents\/[^/]+\/learnings\.md$/.test(f));
+}
+
 export function runSlice(params: {
 	repoRoot: string;
 	runId: string;
@@ -320,7 +325,7 @@ export function runSlice(params: {
 	if (testWriterLesson) lessons.push(testWriterLesson);
 
 	if (!testWriterRun.result.ok) {
-		revertFiles(repoRoot, listDirtyFiles(repoRoot));
+		revertFiles(repoRoot, codeDirtyFiles(repoRoot));
 		return {
 			sliceIndex,
 			kind: 'tdd-pair',
@@ -357,7 +362,7 @@ export function runSlice(params: {
 	if (coderLesson) lessons.push(coderLesson);
 
 	if (!coderRun.result.ok) {
-		revertFiles(repoRoot, listDirtyFiles(repoRoot));
+		revertFiles(repoRoot, codeDirtyFiles(repoRoot));
 		return {
 			sliceIndex,
 			kind: 'tdd-pair',
@@ -378,7 +383,7 @@ export function runSlice(params: {
 
 	for (let round = 1; round <= MAX_REVIEW_ROUNDS; round++) {
 		const isFinalRound = round === MAX_REVIEW_ROUNDS;
-		const dirtyFiles = listDirtyFiles(repoRoot);
+		const dirtyFiles = codeDirtyFiles(repoRoot);
 		const diff = dirtyFiles.map((f) => diffFile(repoRoot, f)).join('\n');
 		const testFileTouched = dirtyFiles.includes(slice.testFile);
 		const testFileDiff = testFileTouched ? diffFile(repoRoot, slice.testFile) : '';
@@ -443,7 +448,7 @@ export function runSlice(params: {
 		if (coderLesson) lessons.push(coderLesson);
 
 		if (!coderRun.result.ok) {
-			revertFiles(repoRoot, listDirtyFiles(repoRoot));
+			revertFiles(repoRoot, codeDirtyFiles(repoRoot));
 			return {
 				sliceIndex,
 				kind: 'tdd-pair',
@@ -468,7 +473,7 @@ export function runSlice(params: {
 		// Unlike plan-reviewer, code that never earned approval is not shipped —
 		// the stakes of committed, unreviewed code are higher than an unapproved
 		// document. Roll back and stop the whole execute run.
-		revertFiles(repoRoot, listDirtyFiles(repoRoot));
+		revertFiles(repoRoot, codeDirtyFiles(repoRoot));
 		return {
 			sliceIndex,
 			kind: 'tdd-pair',
@@ -483,7 +488,7 @@ export function runSlice(params: {
 		};
 	}
 
-	const filesToCommit = listDirtyFiles(repoRoot);
+	const filesToCommit = codeDirtyFiles(repoRoot);
 	commitFiles(repoRoot, filesToCommit, `feat: ${slice.implDecision.slice(0, 72)}`);
 
 	return {
