@@ -69,6 +69,19 @@ describe('renderPlanHtml', () => {
 		expect(html).toContain('not yet reviewed');
 	});
 
+	it('renders a decision\'s "covering:" case list as a separate, visually distinct sub-list', () => {
+		const planWithCases: Plan = {
+			...plan,
+			decisions: [
+				'Write `foo.spec.ts` first, covering: throws when input is null; returns true for a valid id.'
+			]
+		};
+		const html = renderPlanHtml({ spec, plan: planWithCases, review: [] });
+		expect(html).toContain('class="cases"');
+		expect(html).toContain('throws when input is null');
+		expect(html).toContain('returns true for a valid id.');
+	});
+
 	it('escapes HTML in spec and plan text', () => {
 		const withHtml: Spec = { ...spec, problem: '<script>alert(1)</script>' };
 		const html = renderPlanHtml({ spec: withHtml, plan, review });

@@ -56,4 +56,17 @@ describe('renderPlanMarkdown', () => {
 		const md = renderPlanMarkdown(plan, { approved: true, comments: [] });
 		expect(md).toContain('_Approved by plan-reviewer.');
 	});
+
+	it('renders a decision\'s "covering:" case list as a nested markdown sub-list', () => {
+		const planWithCases: Plan = {
+			...plan,
+			decisions: [
+				'Write `foo.spec.ts` first, covering: throws when input is null; returns true for a valid id.'
+			]
+		};
+		const md = renderPlanMarkdown(planWithCases);
+		expect(md).toContain('1. Write `foo.spec.ts` first:');
+		expect(md).toContain('   - throws when input is null');
+		expect(md).toContain('   - returns true for a valid id.');
+	});
 });

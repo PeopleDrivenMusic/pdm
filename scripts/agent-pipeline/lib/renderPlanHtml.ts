@@ -1,3 +1,4 @@
+import { splitDecisionCases } from './splitDecisionCases.ts';
 import type { Plan, PlanFileRef, ReviewRoundTrace, Spec } from '../types.ts';
 
 function escapeHtml(text: string): string {
@@ -24,6 +25,18 @@ function groupFiles(
 	return [...byPath.entries()]
 		.map(([path, refs]) => ({ path, count: refs.length, refs }))
 		.sort((a, b) => b.count - a.count);
+}
+
+function renderDecision(decision: string, index: number): string {
+	const split = splitDecisionCases(decision);
+	if (!split) {
+		return `<li class="decision"><span class="num">${index + 1}</span>${mdLite(decision)}</li>`;
+	}
+	return `<li class="decision"><span class="num">${index + 1}</span>${mdLite(split.intro)}
+	<ul class="cases">
+${split.cases.map((c) => `		<li>${mdLite(c)}</li>`).join('\n')}
+	</ul>
+</li>`;
 }
 
 function reviewOutcome(review: ReviewRoundTrace[]): 'approved' | 'unapproved' | 'none' {
@@ -116,6 +129,9 @@ export function renderPlanHtml(params: {
 	ol.decisions { list-style: none; counter-reset: dec; padding: 0; margin: 0; }
 	.decision { position: relative; background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 14px 48px; margin-bottom: 8px; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
 	.decision .num { position: absolute; left: 14px; top: 14px; font-family: ui-monospace, Consolas, monospace; font-weight: 700; color: var(--accent); }
+	ul.cases { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+	ul.cases li { position: relative; padding-left: 16px; font-size: 13.5px; color: var(--ink-soft); }
+	ul.cases li::before { content: '→'; position: absolute; left: 0; color: var(--accent); }
 	.file-row { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; }
 	.file-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 	.count { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
@@ -152,7 +168,7 @@ export function renderPlanHtml(params: {
 
 	<h2>Decisions</h2>
 	<ol class="decisions">
-${plan.decisions.map((d, i) => `		<li class="decision"><span class="num">${i + 1}</span>${mdLite(d)}</li>`).join('\n')}
+${plan.decisions.map(renderDecision).join('\n')}
 	</ol>
 
 	<h2>Files touched</h2>

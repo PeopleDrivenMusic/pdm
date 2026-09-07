@@ -127,6 +127,26 @@
 				font-weight: 700;
 				color: var(--accent);
 			}
+			ul.cases {
+				list-style: none;
+				margin: 10px 0 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+			}
+			ul.cases li {
+				position: relative;
+				padding-left: 16px;
+				font-size: 13.5px;
+				color: var(--ink-soft);
+			}
+			ul.cases li::before {
+				content: '→';
+				position: absolute;
+				left: 0;
+				color: var(--accent);
+			}
 			.file-row {
 				background: var(--paper-raised);
 				border: 1px solid var(--line);
@@ -293,14 +313,22 @@
 					<code>src/routes/(app)/artist/[slug]/layout.server.spec.ts</code> first, modeled on the
 					event-object-literal + <code>vi.mock</code> pattern in
 					<code>src/routes/api/artist/[id]/subscription/server.spec.ts:10-18</code> (mocking
-					<code>$lib/db/queries</code> and <code>$lib/server/entitlement</code>), covering: throws
-					404 when <code>ArtistService.getArtistBySlug</code> resolves null;
-					<code>viewer.isOwner</code>/<code>isSubscribed</code> true when
-					<code>locals.user.id === artist.userId</code>;
-					<code>EntitlementService.isSubscriberOf</code> is called and <code>canSubscribe</code> is
-					true for a logged-in non-owner non-subscriber. Run
-					<code>yarn test:unit -- --run src/routes/(app)/artist/[slug]/layout.server.spec.ts</code>
-					and confirm it fails (module doesn't exist) before writing the implementation.
+					<code>$lib/db/queries</code> and <code>$lib/server/entitlement</code>)
+					<ul class="cases">
+						<li>throws 404 when <code>ArtistService.getArtistBySlug</code> resolves null</li>
+						<li>
+							<code>viewer.isOwner</code>/<code>isSubscribed</code> true when
+							<code>locals.user.id === artist.userId</code>
+						</li>
+						<li>
+							<code>EntitlementService.isSubscriberOf</code> is called and
+							<code>canSubscribe</code> is true for a logged-in non-owner non-subscriber. Run
+							<code
+								>yarn test:unit -- --run src/routes/(app)/artist/[slug]/layout.server.spec.ts</code
+							>
+							and confirm it fails (module doesn't exist) before writing the implementation.
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">2</span>Only after that spec is red, implement
@@ -340,20 +368,31 @@
 					<code>votePoll</code> action, reusing the <code>evt()</code>-style event-object-literal +
 					<code>vi.mock</code> pattern from
 					<code>src/routes/api/artist/[id]/subscription/server.spec.ts:10-18</code> (mocking
-					<code>$lib/db/services/ContentService</code>'s <code>PostPollService</code>). Cover,
-					unchanged from the current behavior at <code>+page.server.ts:75-99</code>: 401 when
-					<code>locals.user</code> is missing; 400 when <code>pollId</code> or
-					<code>optionId</code> form fields are missing/blank; success path calls
-					<code>PostPollService.vote({ pollId, optionId, userId })</code> and returns
-					<code>{ success: true }</code>; failure path (<code>result.ok === false</code>) returns
-					<code>fail(400, { error: result.reason })</code>. Run
-					<code
-						>yarn test:unit -- --run
-						src/routes/(app)/artist/[slug]/[view]/actions.server.spec.ts</code
-					>
-					and confirm it fails (module doesn't exist yet) before creating the file. This directly
-					addresses the gap where the prior plan flagged votePoll as needing to move but never
-					scheduled the move or its test.
+					<code>$lib/db/services/ContentService</code>'s <code>PostPollService</code>)
+					<ul class="cases">
+						<li>
+							unchanged from the current behavior at <code>+page.server.ts:75-99</code>: 401 when
+							<code>locals.user</code> is missing
+						</li>
+						<li>
+							400 when <code>pollId</code> or <code>optionId</code> form fields are missing/blank
+						</li>
+						<li>
+							success path calls <code>PostPollService.vote({ pollId, optionId, userId })</code> and
+							returns <code>{ success: true }</code>
+						</li>
+						<li>
+							failure path (<code>result.ok === false</code>) returns
+							<code>fail(400, { error: result.reason })</code>. Run
+							<code
+								>yarn test:unit -- --run
+								src/routes/(app)/artist/[slug]/[view]/actions.server.spec.ts</code
+							>
+							and confirm it fails (module doesn't exist yet) before creating the file. This
+							directly addresses the gap where the prior plan flagged votePoll as needing to move
+							but never scheduled the move or its test.
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">6</span>Implement
@@ -374,12 +413,17 @@
 					<code>src/routes/(app)/artist/[slug]/view.spec.ts</code> first for a new pure helper
 					<code>resolveView(view: string | undefined): ViewId</code> (in a new
 					<code>src/routes/(app)/artist/[slug]/view.ts</code> exporting <code>ARTIST_VIEWS</code>,
-					the 6 ids) covering: known ids pass through unchanged; <code>undefined</code> and an
-					unknown string both resolve to <code>'feed'</code>. Run
-					<code>yarn test:unit -- --run src/routes/(app)/artist/[slug]/view.spec.ts</code> and
-					confirm red before writing <code>view.ts</code>. Reused by both
-					<code>[view]/+page.ts</code> (redirect invalid segments to feed) and
-					<code>+page.svelte</code> (derive <code>activeTab</code> from the URL).
+					the 6 ids)
+					<ul class="cases">
+						<li>known ids pass through unchanged</li>
+						<li>
+							<code>undefined</code> and an unknown string both resolve to <code>'feed'</code>. Run
+							<code>yarn test:unit -- --run src/routes/(app)/artist/[slug]/view.spec.ts</code> and
+							confirm red before writing <code>view.ts</code>. Reused by both
+							<code>[view]/+page.ts</code> (redirect invalid segments to feed) and
+							<code>+page.svelte</code> (derive <code>activeTab</code> from the URL).
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">8</span>Write
@@ -392,28 +436,52 @@
 					keep it a plain, framework-agnostic module that runs in the <code>server</code> vitest
 					project (<code>vite.config.ts:120-121</code> glob is
 					<code>src/**/*.{test,spec}.{js,ts}</code> excluding <code>*.svelte.{test,spec}</code>, no
-					browser instance needed). Cases: <code>set</code> then <code>get</code> with the same key
-					returns the exact stored value; <code>get</code> on a missing key returns
-					<code>undefined</code>; a second <code>set</code> on the same key overwrites the first.
-					Run and confirm red before implementing.
+					browser instance needed)
+					<ul class="cases">
+						<li>
+							<code>set</code> then <code>get</code> with the same key returns the exact stored
+							value
+						</li>
+						<li><code>get</code> on a missing key returns <code>undefined</code></li>
+						<li>
+							a second <code>set</code> on the same key overwrites the first. Run and confirm red
+							before implementing.
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">9</span>Write
 					<code>src/routes/api/artist/[slug]/[view]/server.spec.ts</code> first, modeled on
 					<code>src/routes/api/artist/[id]/subscription/server.spec.ts:1-38</code>'s event-object +
 					<code>vi.mock</code> style (and <code>+server.ts:6-24</code>'s plain-handler shape, though
-					this new endpoint is a public GET with no auth/CSRF guard). Cases: GET with
-					<code>view=music</code> calls
-					<code>TrackService.getTracksByArtist</code> (<code>src/lib/db/queries.ts:377</code>) and
-					<code>AlbumService.getAlbumsByArtist</code> (<code>src/lib/db/queries.ts:919</code>) but
-					NOT <code>ArtistPublicContentService.getArtistContent</code>; GET with
-					<code>view=photos</code>/<code>videos</code>/<code>feed</code>/<code>posts</code> calls
-					<code>getArtistContent</code> (<code>src/lib/db/services/ContentService.ts:1114</code>)
-					and, for feed/posts, also the track/album services; GET with <code>view=shop</code> or an
-					unrecognized view calls neither and returns 200 with an empty payload; GET 404s when
-					<code>ArtistService.getArtistBySlug</code> resolves null (this endpoint re-resolves the
-					artist itself since it's fetched independently of the SvelteKit load chain, unlike the
-					page loads which get it from the layout). Run and confirm red.
+					this new endpoint is a public GET with no auth/CSRF guard)
+					<ul class="cases">
+						<li>
+							GET with <code>view=music</code> calls
+							<code>TrackService.getTracksByArtist</code> (<code>src/lib/db/queries.ts:377</code>)
+							and
+							<code>AlbumService.getAlbumsByArtist</code> (<code>src/lib/db/queries.ts:919</code>)
+							but NOT <code>ArtistPublicContentService.getArtistContent</code>
+						</li>
+						<li>
+							GET with <code>view=photos</code>/<code>videos</code>/<code>feed</code>/<code
+								>posts</code
+							>
+							calls
+							<code>getArtistContent</code>
+							(<code>src/lib/db/services/ContentService.ts:1114</code>) and, for feed/posts, also
+							the track/album services
+						</li>
+						<li>
+							GET with <code>view=shop</code> or an unrecognized view calls neither and returns 200
+							with an empty payload
+						</li>
+						<li>
+							GET 404s when <code>ArtistService.getArtistBySlug</code> resolves null (this endpoint
+							re-resolves the artist itself since it's fetched independently of the SvelteKit load
+							chain, unlike the page loads which get it from the layout). Run and confirm red.
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">10</span>Implement the endpoint reusing
@@ -433,24 +501,33 @@
 					<code>[view]/+page.ts</code> universal load (no existing <code>+page.ts</code> exists
 					anywhere under <code>src/routes</code> to model), mocking
 					<code>$lib/stores/artist-view-cache</code>, <code>$app/environment</code>'s
-					<code>browser</code>, and <code>event.fetch</code>. Cases: (a)
-					<code>browser: true</code> + cache miss → calls
-					<code>event.fetch('/api/artist/&lt;slug&gt;/&lt;view&gt;')</code>, awaits/parses the JSON,
-					stores the resolved value in the cache under `<code> </code>${slug}:${view}<code> </code
-					><code>, and returns it; (b) </code>browser: true<code>
-						+ cache hit → returns the cached value synchronously without calling </code
-					>event.fetch<code>
-						at all — the actual 'don't refetch an already-loaded view' behavior; (c) </code
-					>browser: false<code> (SSR) → always calls </code>event.fetch<code>
-						and never reads/writes the cache, even with a same-keyed entry present — a server-side
-						module-level </code
-					>Map<code>
-						is shared mutable state across every concurrent user's request in the same Node process,
-						so consulting it during SSR would leak one visitor's content into another's response;
-						this case must be shown to fail if the </code
-					>browser<code> check is removed; (d) an invalid </code>params.view<code> triggers </code
-					>redirect(307, '/artist/&lt;slug&gt;/feed')<code> via </code>resolveView`, checked before
-					any fetch/cache logic. Run and confirm red.
+					<code>browser</code>, and <code>event.fetch</code>
+					<ul class="cases">
+						<li>
+							(a) <code>browser: true</code> + cache miss → calls
+							<code>event.fetch('/api/artist/&lt;slug&gt;/&lt;view&gt;')</code>, awaits/parses the
+							JSON, stores the resolved value in the cache under `<code> </code>${slug}:${view}<code
+							> </code>`, and returns it
+						</li>
+						<li>
+							(b) <code>browser: true</code> + cache hit → returns the cached value synchronously
+							without calling <code>event.fetch</code> at all — the actual 'don't refetch an
+							already-loaded view' behavior
+						</li>
+						<li>
+							(c) <code>browser: false</code> (SSR) → always calls <code>event.fetch</code> and
+							never reads/writes the cache, even with a same-keyed entry present — a server-side
+							module-level <code>Map</code> is shared mutable state across every concurrent user's
+							request in the same Node process, so consulting it during SSR would leak one visitor's
+							content into another's response; this case must be shown to fail if the
+							<code>browser</code> check is removed
+						</li>
+						<li>
+							(d) an invalid <code>params.view</code> triggers
+							<code>redirect(307, '/artist/&lt;slug&gt;/feed')</code> via <code>resolveView</code>,
+							checked before any fetch/cache logic. Run and confirm red.
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">12</span>Implement <code>[view]/+page.ts</code> per the above. Returning
@@ -525,16 +602,24 @@
 						>vi.mock('$app/navigation', () =&gt; ({ goto: vi.fn() }))</code
 					>, the same technique as
 					<code>src/lib/studio/music/uploadController.svelte.spec.ts:11</code>) and
-					<code>$app/state</code> (a <code>page</code> object exposing <code>.params.view</code>).
-					Cases: rendering with <code>page.params.view = 'music'</code> derives
-					<code>activeTab</code> as the Music tab (asserted via the active tab button's class/aria
-					state); clicking the Feed tab button calls the mocked <code>goto</code> with
-					<code>/artist/&lt;slug&gt;/feed</code> and never calls <code>invalidateAll</code>. Run
-					<code
-						>yarn test:unit -- --run src/routes/(app)/artist/[slug]/[view]/page.svelte.spec.ts</code
-					>
-					and confirm it fails before the <code>+page.svelte</code> move/rewrite, then confirm green
-					after.
+					<code>$app/state</code> (a <code>page</code> object exposing <code>.params.view</code>)
+					<ul class="cases">
+						<li>
+							rendering with <code>page.params.view = 'music'</code> derives
+							<code>activeTab</code> as the Music tab (asserted via the active tab button's
+							class/aria state)
+						</li>
+						<li>
+							clicking the Feed tab button calls the mocked <code>goto</code> with
+							<code>/artist/&lt;slug&gt;/feed</code> and never calls <code>invalidateAll</code>. Run
+							<code
+								>yarn test:unit -- --run
+								src/routes/(app)/artist/[slug]/[view]/page.svelte.spec.ts</code
+							>
+							and confirm it fails before the <code>+page.svelte</code> move/rewrite, then confirm
+							green after.
+						</li>
+					</ul>
 				</li>
 				<li class="decision">
 					<span class="num">17</span>Retype the shared view components' props:

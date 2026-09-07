@@ -1,10 +1,18 @@
+import { splitDecisionCases } from './splitDecisionCases.ts';
 import type { Plan } from '../types.ts';
+
+function renderDecisionLine(decision: string, index: number): string {
+	const split = splitDecisionCases(decision);
+	if (!split) return `${index + 1}. ${decision}`;
+	const caseLines = split.cases.map((c) => `   - ${c}`).join('\n');
+	return `${index + 1}. ${split.intro}:\n${caseLines}`;
+}
 
 export function renderPlanMarkdown(
 	plan: Plan,
 	review?: { approved: boolean; comments: string[] }
 ): string {
-	const decisions = plan.decisions.map((d, i) => `${i + 1}. ${d}`).join('\n');
+	const decisions = plan.decisions.map(renderDecisionLine).join('\n');
 
 	const fileMapRows = plan.fileMap
 		.map((r) => `| \`${r.path}\` | ${r.line} | ${r.reason} |`)
