@@ -150,6 +150,7 @@ function runTestWriter(params: {
 		callAgent: (prompt) => {
 			const r = callAgent(config, prompt, execClaude);
 			if (r.ok) addUsage(usage, r);
+			else console.error(`  test-writer attempt failed: ${r.reason.slice(0, 500)}`);
 			return r;
 		},
 		buildPrompt: (lastError) =>
@@ -202,6 +203,7 @@ function runCoder(params: {
 		callAgent: (prompt) => {
 			const r = callAgent(config, prompt, execClaude);
 			if (r.ok) addUsage(usage, r);
+			else console.error(`  coder attempt failed: ${r.reason.slice(0, 500)}`);
 			return r;
 		},
 		buildPrompt: (lastError) =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { callAgent } from './callAgent.ts';
+import { callAgent, describeSpawnResult } from './callAgent.ts';
 import type { AgentConfig } from './callAgent.ts';
 
 const config: AgentConfig = {
@@ -124,5 +124,31 @@ describe('callAgent', () => {
 		const args = seenArgs[0];
 		const modeIndex = args.indexOf('--permission-mode');
 		expect(args[modeIndex + 1]).toBe('acceptEdits');
+	});
+});
+
+describe('describeSpawnResult', () => {
+	// Live bug (2026-09-07): a real headless run had 3 attempts fail with zero
+	// cost/tokens and an empty reflection — execClaude was silently collapsing
+	// a spawn-level failure to '', so callAgent could only ever report "CLI
+	// stdout was not valid JSON: " with nothing after the colon.
+	it('surfaces the spawn error when the process never started', () => {
+		const text = describeSpawnResult({ stdout: null, stderr: null, error: new Error('EAGAIN') });
+		expect(text).toContain('EAGAIN');
+	});
+
+	it('surfaces stderr when the process ran but produced no stdout', () => {
+		const text = describeSpawnResult({ stdout: null, stderr: 'permission denied' });
+		expect(text).toContain('permission denied');
+	});
+
+	it('returns stdout unchanged when present, ignoring stderr/error', () => {
+		expect(describeSpawnResult({ stdout: '{"ok":true}', stderr: 'some warning' })).toBe(
+			'{"ok":true}'
+		);
+	});
+
+	it('returns an empty string when there is truly nothing to report', () => {
+		expect(describeSpawnResult({ stdout: null, stderr: null })).toBe('');
 	});
 });

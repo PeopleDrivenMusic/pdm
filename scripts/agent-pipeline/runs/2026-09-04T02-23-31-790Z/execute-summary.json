@@ -8,33 +8,26 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/layout.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 381730,
+			"durationMs": 46442,
 			"attempts": {
-				"testWriter": 1,
-				"coder": 3
+				"testWriter": 3,
+				"coder": 0
 			},
 			"usage": {
-				"costUsd": 1.1472736000000001,
-				"inputTokens": 1108570,
-				"outputTokens": 21654
+				"costUsd": 0,
+				"inputTokens": 0,
+				"outputTokens": 0
 			},
-			"lessons": [
-				{
-					"agent": "coder",
-					"triggerTag": "wrong-fix",
-					"rule": "Never modify or pin dependency/lockfile versions to satisfy a test fix; only change application source that the decision actually describes.",
-					"promoted": false
-				}
-			],
+			"lessons": [],
 			"review": [],
 			"committed": false
 		}
 	],
 	"totals": {
-		"costUsd": 1.1472736000000001,
-		"inputTokens": 1108570,
-		"outputTokens": 21654,
-		"durationMs": 381730
+		"costUsd": 0,
+		"inputTokens": 0,
+		"outputTokens": 0,
+		"durationMs": 46442
 	},
 	"outcome": "escalated"
 }

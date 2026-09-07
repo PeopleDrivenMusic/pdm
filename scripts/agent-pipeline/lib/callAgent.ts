@@ -16,6 +16,20 @@ export type CallAgentResult =
 
 export type ExecFn = (args: string[]) => string;
 
+/** Turns a spawnSync-shaped result into the string callAgent parses as JSON — pulled out of execClaude so the fallback branches (spawn never started, or produced no stdout) are testable without a real subprocess. */
+export function describeSpawnResult(result: {
+	stdout: string | null;
+	stderr: string | null;
+	error?: Error;
+}): string {
+	if (result.error) return `[claude CLI failed to start: ${result.error.message}]`;
+	if (result.stdout) return result.stdout;
+	if (result.stderr) {
+		return `[claude CLI produced no stdout; stderr: ${result.stderr.slice(0, 500)}]`;
+	}
+	return '';
+}
+
 // spawnSync, not execFileSync: live probe (2026-09-03, CLI 2.1.258) showed a
 // call denied a tool write returns is_error:false in its JSON body but exit
 // code 2 — execFileSync would throw on that exit code before we could read
@@ -23,7 +37,7 @@ export type ExecFn = (args: string[]) => string;
 // and never look at the exit code.
 export function execClaude(args: string[]): string {
 	const result = spawnSync('claude', args, { encoding: 'utf-8' });
-	return result.stdout ?? '';
+	return describeSpawnResult(result);
 }
 
 export function callAgent(config: AgentConfig, prompt: string, exec: ExecFn): CallAgentResult {
