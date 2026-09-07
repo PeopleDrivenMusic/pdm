@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	commitFiles,
 	currentBranch,
@@ -66,6 +66,24 @@ describe('git helpers', () => {
 		revertFiles(repo, ['never-committed.txt']);
 		expect(existsSync(newFile)).toBe(false);
 		expect(isWorkingTreeClean(repo)).toBe(true);
+	});
+
+	it('does not print git\'s "did you forget to add" noise for an untracked file being reverted', () => {
+		// Live bug (2026-09-07): the real first execute run logged two scary
+		// "pathspec did not match... did you forget to 'git add'?" lines for
+		// its two brand-new files, which looked like a crash but wasn't —
+		// revertFiles completed and left the tree clean either way. The noise
+		// comes from the internal is-it-tracked probe, which is *expected* to
+		// "fail" for every new file; it should never reach stderr.
+		const newFile = join(repo, 'never-committed.txt');
+		writeFileSync(newFile, 'oops\n');
+		const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+		try {
+			revertFiles(repo, ['never-committed.txt']);
+		} finally {
+			expect(stderrSpy).not.toHaveBeenCalled();
+			stderrSpy.mockRestore();
+		}
 	});
 
 	it('diffFile returns an empty string when the file matches HEAD', () => {

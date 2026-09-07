@@ -21,7 +21,17 @@ export function commitFiles(cwd: string, files: string[], message: string): void
 
 function isTracked(cwd: string, file: string): boolean {
 	try {
-		execFileSync('git', ['ls-files', '--error-unmatch', '--', file], { cwd });
+		// stdio suppressed: git prints its own "pathspec did not match... did
+		// you forget to 'git add'?" error to stderr whenever this probe finds
+		// an untracked file — which is the expected, routine outcome for every
+		// new file a slice creates, not a real problem. Left un-suppressed,
+		// a real run's log reads as if something crashed when nothing did
+		// (confirmed live: revertFiles completed and left the tree clean while
+		// this noise printed for every new file).
+		execFileSync('git', ['ls-files', '--error-unmatch', '--', file], {
+			cwd,
+			stdio: ['ignore', 'ignore', 'ignore']
+		});
 		return true;
 	} catch {
 		return false;

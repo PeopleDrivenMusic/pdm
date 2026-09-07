@@ -8,21 +8,21 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/layout.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 169640,
+			"durationMs": 279482,
 			"attempts": {
-				"testWriter": 3,
-				"coder": 0
+				"testWriter": 1,
+				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.7346104,
-				"inputTokens": 1052397,
-				"outputTokens": 9589
+				"costUsd": 0.6134458,
+				"inputTokens": 763784,
+				"outputTokens": 17674
 			},
 			"lessons": [
 				{
-					"agent": "test-writer",
-					"triggerTag": "other",
-					"rule": "Before writing any test file, check whether Plan mode is active in the session and immediately report blocked instead of attempting the write.",
+					"agent": "coder",
+					"triggerTag": "wrong-fix",
+					"rule": "Before finishing, run yarn install (or check yarn.lock) to ensure lockfile-pinned dependency versions match package.json resolutions instead of leaving stale/mismatched installed packages.",
 					"promoted": false
 				}
 			],
@@ -31,10 +31,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.7346104,
-		"inputTokens": 1052397,
-		"outputTokens": 9589,
-		"durationMs": 169640
+		"costUsd": 0.6134458,
+		"inputTokens": 763784,
+		"outputTokens": 17674,
+		"durationMs": 279482
 	},
 	"outcome": "escalated"
 }
