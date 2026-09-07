@@ -34,21 +34,21 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/page.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 428854,
+			"durationMs": 375983,
 			"attempts": {
 				"testWriter": 1,
 				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.7762100999999999,
-				"inputTokens": 1334633,
-				"outputTokens": 22249
+				"costUsd": 0.630263,
+				"inputTokens": 878256,
+				"outputTokens": 20539
 			},
 			"lessons": [
 				{
 					"agent": "coder",
-					"triggerTag": "wrong-fix",
-					"rule": "Match assertion expectations exactly against the actual redirect target value the code produces, not an assumed one.",
+					"triggerTag": "other",
+					"rule": "Run yarn check locally before declaring done to catch pre-existing lint/type warnings that block the mechanical gate.",
 					"promoted": false
 				}
 			],
@@ -57,10 +57,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.7762100999999999,
-		"inputTokens": 1334633,
-		"outputTokens": 22249,
-		"durationMs": 428854
+		"costUsd": 0.630263,
+		"inputTokens": 878256,
+		"outputTokens": 20539,
+		"durationMs": 375983
 	},
 	"outcome": "escalated"
 }
