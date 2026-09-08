@@ -34,21 +34,21 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/page.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 416451,
+			"durationMs": 190519,
 			"attempts": {
 				"testWriter": 1,
 				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.8314843999999999,
-				"inputTokens": 1280070,
-				"outputTokens": 23430
+				"costUsd": 0.382973,
+				"inputTokens": 514466,
+				"outputTokens": 9859
 			},
 			"lessons": [
 				{
 					"agent": "coder",
-					"triggerTag": "other",
-					"rule": "Run the test suite with a memory-bounded/limited config (or increase Node heap via NODE_OPTIONS) rather than retrying the same OOM-prone invocation unchanged.",
+					"triggerTag": "wrong-fix",
+					"rule": "Before declaring done, run `yarn check` locally (or at least visually re-verify the touched files against tsc/svelte-check rules) to catch type/lint errors introduced by the implementation.",
 					"promoted": true
 				}
 			],
@@ -57,10 +57,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.8314843999999999,
-		"inputTokens": 1280070,
-		"outputTokens": 23430,
-		"durationMs": 416451
+		"costUsd": 0.382973,
+		"inputTokens": 514466,
+		"outputTokens": 9859,
+		"durationMs": 190519
 	},
 	"outcome": "escalated"
 }

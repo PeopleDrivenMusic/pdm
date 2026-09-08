@@ -167,19 +167,19 @@
 
 			<div class="totals">
 				<div class="cell">
-					<div class="n">$0.8315</div>
+					<div class="n">$0.383</div>
 					<div class="l">total cost</div>
 				</div>
 				<div class="cell">
-					<div class="n">1,280,070</div>
+					<div class="n">514,466</div>
 					<div class="l">input tokens</div>
 				</div>
 				<div class="cell">
-					<div class="n">23,430</div>
+					<div class="n">9,859</div>
 					<div class="l">output tokens</div>
 				</div>
 				<div class="cell">
-					<div class="n">416.5s</div>
+					<div class="n">190.5s</div>
 					<div class="l">wall time</div>
 				</div>
 			</div>
@@ -214,10 +214,10 @@
 						<td class="mono">slice 1: src/routes/(app)/artist/[slug]/page.server.spec.ts</td>
 						<td><span class="badge fail">escalated</span></td>
 						<td class="num">4</td>
-						<td class="num">416.5s</td>
-						<td class="num">1,280,070</td>
-						<td class="num">23,430</td>
-						<td class="num">$0.8315</td>
+						<td class="num">190.5s</td>
+						<td class="num">514,466</td>
+						<td class="num">9,859</td>
+						<td class="num">$0.383</td>
 					</tr>
 					<tr class="sub-row">
 						<td colspan="7"><div class="review-line">review:</div></td>
@@ -238,10 +238,11 @@
 				<tbody>
 					<tr>
 						<td class="mono">coder</td>
-						<td class="mono">other</td>
+						<td class="mono">wrong-fix</td>
 						<td>
-							Run the test suite with a memory-bounded/limited config (or increase Node heap via
-							NODE_OPTIONS) rather than retrying the same OOM-prone invocation unchanged.
+							Before declaring done, run `yarn check` locally (or at least visually re-verify the
+							touched files against tsc/svelte-check rules) to catch type/lint errors introduced by
+							the implementation.
 						</td>
 						<td><span class="badge ok">Active</span></td>
 					</tr>
