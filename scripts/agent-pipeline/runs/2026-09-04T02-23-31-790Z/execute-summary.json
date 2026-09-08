@@ -34,22 +34,22 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/page.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 190519,
+			"durationMs": 732505,
 			"attempts": {
 				"testWriter": 1,
 				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.382973,
-				"inputTokens": 514466,
-				"outputTokens": 9859
+				"costUsd": 1.6377885,
+				"inputTokens": 2468617,
+				"outputTokens": 47004
 			},
 			"lessons": [
 				{
 					"agent": "coder",
 					"triggerTag": "wrong-fix",
-					"rule": "Before declaring done, run `yarn check` locally (or at least visually re-verify the touched files against tsc/svelte-check rules) to catch type/lint errors introduced by the implementation.",
-					"promoted": true
+					"rule": "Run svelte-check (or yarn check) against the actual touched files before declaring done, and only fix warnings/errors that stem from your own changes.",
+					"promoted": false
 				}
 			],
 			"review": [],
@@ -57,10 +57,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.382973,
-		"inputTokens": 514466,
-		"outputTokens": 9859,
-		"durationMs": 190519
+		"costUsd": 1.6377885,
+		"inputTokens": 2468617,
+		"outputTokens": 47004,
+		"durationMs": 732505
 	},
 	"outcome": "escalated"
 }

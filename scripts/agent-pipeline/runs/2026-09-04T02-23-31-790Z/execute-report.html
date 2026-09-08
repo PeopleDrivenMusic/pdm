@@ -167,19 +167,19 @@
 
 			<div class="totals">
 				<div class="cell">
-					<div class="n">$0.383</div>
+					<div class="n">$1.6378</div>
 					<div class="l">total cost</div>
 				</div>
 				<div class="cell">
-					<div class="n">514,466</div>
+					<div class="n">2,468,617</div>
 					<div class="l">input tokens</div>
 				</div>
 				<div class="cell">
-					<div class="n">9,859</div>
+					<div class="n">47,004</div>
 					<div class="l">output tokens</div>
 				</div>
 				<div class="cell">
-					<div class="n">190.5s</div>
+					<div class="n">732.5s</div>
 					<div class="l">wall time</div>
 				</div>
 			</div>
@@ -214,10 +214,10 @@
 						<td class="mono">slice 1: src/routes/(app)/artist/[slug]/page.server.spec.ts</td>
 						<td><span class="badge fail">escalated</span></td>
 						<td class="num">4</td>
-						<td class="num">190.5s</td>
-						<td class="num">514,466</td>
-						<td class="num">9,859</td>
-						<td class="num">$0.383</td>
+						<td class="num">732.5s</td>
+						<td class="num">2,468,617</td>
+						<td class="num">47,004</td>
+						<td class="num">$1.6378</td>
 					</tr>
 					<tr class="sub-row">
 						<td colspan="7"><div class="review-line">review:</div></td>
@@ -240,11 +240,10 @@
 						<td class="mono">coder</td>
 						<td class="mono">wrong-fix</td>
 						<td>
-							Before declaring done, run `yarn check` locally (or at least visually re-verify the
-							touched files against tsc/svelte-check rules) to catch type/lint errors introduced by
-							the implementation.
+							Run svelte-check (or yarn check) against the actual touched files before declaring
+							done, and only fix warnings/errors that stem from your own changes.
 						</td>
-						<td><span class="badge ok">Active</span></td>
+						<td><span class="badge muted">Candidate</span></td>
 					</tr>
 				</tbody>
 			</table>

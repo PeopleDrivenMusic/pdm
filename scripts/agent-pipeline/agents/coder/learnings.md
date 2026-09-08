@@ -6,3 +6,5 @@
 - Before declaring done, run `yarn check` locally (or at least visually re-verify the touched files against tsc/svelte-check rules) to catch type/lint errors introduced by the implementation. (survived x1)
 
 ## Candidates (pending promotion)
+
+- x1 wrong-fix: Run svelte-check (or yarn check) against the actual touched files before declaring done, and only fix warnings/errors that stem from your own changes. → 2026-09-04T02-23-31-790Z
