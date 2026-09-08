@@ -9,6 +9,17 @@ export type CommandResult = { ok: boolean; exitCode: number | null; output: stri
  * command itself; the agent never self-reports whether its own code passes.
  */
 export function runCommand(command: string, args: string[], cwd?: string): CommandResult {
+	// Live bug (2026-09-07): a real coder attempt hit an actual OOM running the
+	// project's vitest/svelte-check gates on this machine, which is separately
+	// known to BSOD under heavy I/O — an unbounded child heap can take down the
+	// whole OS instead of just failing its own process. Capping it turns that
+	// into an ordinary, catchable, retryable gate failure. Appended (not
+	// overwritten) in case the environment already sets NODE_OPTIONS.
+	const env = {
+		...process.env,
+		NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=4096`.trim()
+	};
+
 	// Live-verified (2026-09-04): spawnSync('yarn', ...) with shell:false is a
 	// real ENOENT on Windows — yarn resolves only via its .cmd shim. `shell:
 	// true` looks like the fix but isn't safe: Node's own deprecation warning
@@ -20,8 +31,8 @@ export function runCommand(command: string, args: string[], cwd?: string): Comma
 	// and paths containing ()/[] (real SvelteKit route segments).
 	const isWindows = process.platform === 'win32';
 	const result = isWindows
-		? spawnSync('cmd.exe', ['/d', '/s', '/c', command, ...args], { cwd, encoding: 'utf-8' })
-		: spawnSync(command, args, { cwd, encoding: 'utf-8' });
+		? spawnSync('cmd.exe', ['/d', '/s', '/c', command, ...args], { cwd, encoding: 'utf-8', env })
+		: spawnSync(command, args, { cwd, encoding: 'utf-8', env });
 	if (result.error) {
 		return { ok: false, exitCode: null, output: result.error.message };
 	}

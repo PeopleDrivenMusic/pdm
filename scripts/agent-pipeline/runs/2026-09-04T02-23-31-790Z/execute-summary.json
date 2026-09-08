@@ -34,22 +34,22 @@
 			"kind": "tdd-pair",
 			"testFile": "src/routes/(app)/artist/[slug]/page.server.spec.ts",
 			"outcome": "escalated",
-			"durationMs": 375983,
+			"durationMs": 416451,
 			"attempts": {
 				"testWriter": 1,
 				"coder": 3
 			},
 			"usage": {
-				"costUsd": 0.630263,
-				"inputTokens": 878256,
-				"outputTokens": 20539
+				"costUsd": 0.8314843999999999,
+				"inputTokens": 1280070,
+				"outputTokens": 23430
 			},
 			"lessons": [
 				{
 					"agent": "coder",
 					"triggerTag": "other",
-					"rule": "Run yarn check locally before declaring done to catch pre-existing lint/type warnings that block the mechanical gate.",
-					"promoted": false
+					"rule": "Run the test suite with a memory-bounded/limited config (or increase Node heap via NODE_OPTIONS) rather than retrying the same OOM-prone invocation unchanged.",
+					"promoted": true
 				}
 			],
 			"review": [],
@@ -57,10 +57,10 @@
 		}
 	],
 	"totals": {
-		"costUsd": 0.630263,
-		"inputTokens": 878256,
-		"outputTokens": 20539,
-		"durationMs": 375983
+		"costUsd": 0.8314843999999999,
+		"inputTokens": 1280070,
+		"outputTokens": 23430,
+		"durationMs": 416451
 	},
 	"outcome": "escalated"
 }
