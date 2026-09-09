@@ -98,7 +98,7 @@
 		"@mdi/js": "^7.4.47",
 		"@node-rs/argon2": "^2.0.2",
 		"@oslojs/encoding": "^1.1.0",
-		"@tiptap/core": "^3.26.0",
+		"@tiptap/core": "^3.30.5",
 		"@tiptap/extension-placeholder": "^3.26.0",
 		"@tiptap/pm": "^3.26.0",
 		"@tiptap/starter-kit": "^3.26.0",
