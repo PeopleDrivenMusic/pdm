@@ -106,7 +106,7 @@
 		"dotenv": "^17.2.1",
 		"drizzle-orm": "^0.45.2",
 		"emoji-picker-element": "^1.29.1",
-		"music-metadata": "^11.12.0",
+		"music-metadata": "^11.16.0",
 		"ogl": "^1.0.11",
 		"postgres": "^3.4.7",
 		"prom-client": "^15.1.0"
